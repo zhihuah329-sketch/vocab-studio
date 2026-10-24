@@ -51,6 +51,29 @@ def clean_daily(value: object) -> dict:
     return daily
 
 
+ACTIVITY_KINDS = {"story", "exam", "translation", "vocabulary"}
+MAX_ACTIVITY = 500
+
+
+def clean_activity(value: object) -> list:
+    """Keep the most recent valid practice records; older files simply have none."""
+    activity = []
+    if not isinstance(value, list):
+        return activity
+    for item in value[-MAX_ACTIVITY:]:
+        if not isinstance(item, dict) or item.get("kind") not in ACTIVITY_KINDS:
+            continue
+        at = item.get("at")
+        if not isinstance(at, str) or not 10 <= len(at) <= 40:
+            continue
+        record = {"kind": item["kind"], "title": str(item.get("title") or "")[:120], "at": at}
+        score = item.get("score")
+        if isinstance(score, int) and not isinstance(score, bool) and 0 <= score <= 5:
+            record["score"] = score
+        activity.append(record)
+    return activity
+
+
 @lru_cache(maxsize=1)
 def load_books(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -82,10 +105,10 @@ def read_study(path: Path) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, dict) and isinstance(data.get("custom"), list) and isinstance(data.get("progress"), dict):
-            return {"custom": data["custom"], "progress": data["progress"], "activeBook": data.get("activeBook", "cet4"), "plans": clean_plans(data.get("plans")), "daily": clean_daily(data.get("daily"))}
+            return {"custom": data["custom"], "progress": data["progress"], "activeBook": data.get("activeBook", "cet4"), "plans": clean_plans(data.get("plans")), "daily": clean_daily(data.get("daily")), "activity": clean_activity(data.get("activity"))}
     except (OSError, ValueError):
         pass
-    return {"custom": [], "progress": {}, "activeBook": "cet4", "plans": {}, "daily": {}}
+    return {"custom": [], "progress": {}, "activeBook": "cet4", "plans": {}, "daily": {}, "activity": []}
 
 
 def save_study(path: Path, data: dict) -> dict:
@@ -124,7 +147,7 @@ def save_study(path: Path, data: dict) -> dict:
     active_book = data.get("activeBook", "cet4")
     if active_book not in BOOK_IDS:
         active_book = "cet4"
-    result = {"custom": custom, "progress": progress, "activeBook": active_book, "plans": clean_plans(data.get("plans")), "daily": clean_daily(data.get("daily"))}
+    result = {"custom": custom, "progress": progress, "activeBook": active_book, "plans": clean_plans(data.get("plans")), "daily": clean_daily(data.get("daily")), "activity": clean_activity(data.get("activity"))}
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")

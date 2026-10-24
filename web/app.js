@@ -7,8 +7,10 @@ let latestExam = null;
 let latestTranslation = null;
 let latestVocabulary = null;
 const wordDetails = new Map();
-const progress = { stories: 0, exams: 0, translations: 0, vocabularies: 0, studies: 0, activity: [] };
-let studyState = { custom: [], progress: {}, activeBook: 'cet4', plans: {}, daily: {} };
+const ACTIVITY_LABELS = { story: '阅读短文', exam: '等级考试阅读', translation: '翻译训练', vocabulary: 'AI 词表' };
+let studyState = { custom: [], progress: {}, activeBook: 'cet4', plans: {}, daily: {}, activity: [] };
+let bookMeta = [];
+let nickname = '';
 let studyItems = [];
 let studyQueue = [];
 let studyIndex = 0;
@@ -24,12 +26,17 @@ function applyTheme(theme) {
   document.body.dataset.theme = theme;
   $('theme-toggle').textContent = theme === 'dark' ? '☀ 浅色模式' : '☾ 深色模式';
   $('theme-toggle').setAttribute('aria-label', `切换${theme === 'dark' ? '浅色' : '深色'}模式`);
+  document.querySelectorAll('.theme-option').forEach(button => {
+    const active = button.dataset.themeChoice === theme;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-checked', String(active));
+  });
 }
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      await post('/api/settings', JSON.stringify({ api_url: endpoint($('api-url').value), model: $('model').value.trim(), theme: document.body.dataset.theme || 'light' }), { 'Content-Type': 'application/json' });
+      await post('/api/settings', JSON.stringify({ api_url: endpoint($('api-url').value), model: $('model').value.trim(), theme: document.body.dataset.theme || 'light', nickname }), { 'Content-Type': 'application/json' });
     } catch (error) { message('buddy-status', `配置保存失败：${error.message}`, true); }
   }, 350);
 }
@@ -40,6 +47,9 @@ async function loadSettings() {
     if (response.ok) {
       $('api-url').value = saved.api_url;
       $('model').value = saved.model;
+      nickname = saved.nickname || '';
+      $('profile-nickname').value = nickname;
+      renderAvatar();
       applyTheme(saved.theme);
       syncPreset();
       if (saved.api_url.includes('127.0.0.1:5178')) detectWorkbuddy(false);
@@ -49,6 +59,7 @@ async function loadSettings() {
 applyTheme('light');
 loadSettings();
 $('theme-toggle').addEventListener('click', () => { applyTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'); scheduleSave(); });
+document.querySelectorAll('.theme-option').forEach(button => button.addEventListener('click', () => { applyTheme(button.dataset.themeChoice); scheduleSave(); }));
 
 function message(id, value, error = false) {
   const node = $(id);
@@ -151,6 +162,21 @@ function syncPreset() {
     matched ||= active;
   });
   if (!matched) document.querySelector('.preset[data-custom]').classList.add('active');
+  updateApiChip();
+}
+function updateApiChip() {
+  const model = $('model').value.trim();
+  const configured = Boolean(endpoint($('api-url').value) && model);
+  const chip = $('api-chip');
+  chip.textContent = configured ? `● ${model}` : '● 未配置接口';
+  chip.classList.toggle('ready', configured);
+  chip.title = configured ? `当前接口：${endpoint($('api-url').value)}` : '点击前往设置 AI 接口';
+}
+$('api-chip').addEventListener('click', () => showView('settings'));
+function setApiState(text, kind = '') {
+  const node = $('api-state');
+  node.textContent = text;
+  node.className = `api-state ${kind}`.trim();
 }
 document.querySelectorAll('.preset').forEach(button => button.addEventListener('click', () => {
   if (button.dataset.url) {
@@ -169,7 +195,7 @@ async function detectWorkbuddy(select) {
   try {
     const response = await fetch('/api/workbuddy', { headers: { 'X-App-Token': token } });
     const result = await response.json();
-    if (!result.available) return message('buddy-status', result.message, true);
+    if (!result.available) { setApiState('未连接', 'error'); return message('buddy-status', result.message, true); }
     const options = $('model-options');
     options.replaceChildren();
     for (const name of result.models) {
@@ -184,9 +210,27 @@ async function detectWorkbuddy(select) {
       scheduleSave();
     }
     message('buddy-status', result.models.length ? `已识别 Buddy，找到 ${result.models.length} 个模型` : '已识别 Buddy，暂无可用模型');
-  } catch (error) { message('buddy-status', `检测失败：${error.message}`, true); }
+    setApiState(result.models.length ? 'Buddy 已连接' : 'Buddy 无模型', result.models.length ? 'ok' : 'error');
+  } catch (error) { setApiState('检测失败', 'error'); message('buddy-status', `检测失败：${error.message}`, true); }
 }
 $('detect-workbuddy').addEventListener('click', () => detectWorkbuddy(true));
+$('test-api').addEventListener('click', async () => {
+  let request;
+  try { request = sharedRequest(); } catch (error) { return message('buddy-status', error.message, true); }
+  $('test-api').disabled = true;
+  setApiState('测试中…');
+  message('buddy-status', '正在发送一次测试请求…');
+  const started = performance.now();
+  try {
+    const result = await post('/api/translate-selection', JSON.stringify({ ...request, text: 'hello', context: 'hello' }), { 'Content-Type': 'application/json' });
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
+    setApiState('连接正常', 'ok');
+    message('buddy-status', `连接成功（${seconds} 秒）：hello → ${result.translation}`);
+  } catch (error) {
+    setApiState('连接失败', 'error');
+    message('buddy-status', `测试失败：${error.message}`, true);
+  } finally { $('test-api').disabled = false; }
+});
 
 function endpoint(value) {
   const url = value.trim().replace(/\/+$/, '');
@@ -197,7 +241,7 @@ function endpoint(value) {
 function sharedRequest() {
   const api_url = endpoint($('api-url').value);
   const model = $('model').value.trim();
-  if (!api_url || !model) throw new Error('请填写 API URL 和模型名称。');
+  if (!api_url || !model) throw new Error('请先在「设置 → AI 接口」中填写 API URL 和模型名称。');
   scheduleSave();
   return { api_url, model, api_key: $('api-key').value.trim(), words: words.filter(word => selected.has(word)) };
 }
@@ -216,7 +260,7 @@ $('generate').addEventListener('click', async () => {
     }), { 'Content-Type': 'application/json' });
     latest = { ...result, words: request.words };
     renderResult(latest);
-    recordActivity('阅读短文', result.title, 'stories');
+    recordActivity('story', result.title);
     message('generate-message', result.missing.length ? `已生成，${result.missing.length} 个目标词未出现。` : '已生成，所有目标词均已出现。', Boolean(result.missing.length));
   } catch (error) {
     message('generate-message', error.message, true);
@@ -229,8 +273,12 @@ const views = {
   exam: { label: '等级考试阅读', eyebrow: 'READ · THINK · ANSWER', title: '读一篇文章，<br><em>练一场考试。</em>', description: '选择考试类型，完成原创模拟阅读与五道选择题。' },
   translation: { label: '翻译训练', eyebrow: 'FROM WORDS TO EXPRESSION', title: '把理解写出来，<br><em>让表达更准确。</em>', description: '汉译英或英译汉，先独立作答，再对照参考译文。' },
   vocabulary: { label: 'AI 生成词表', eyebrow: 'BUILD YOUR WORD BANK', title: '选一个方向，<br><em>生成下一份词表。</em>', description: '按等级和主题生成词汇、释义与例句，直接加入练习。' },
-  study: { label: '背单词', eyebrow: 'A LITTLE, EVERY DAY', title: '每天记一点，<br><em>让词汇真正留下。</em>', description: '选择词书，先回忆再翻面，按记忆情况安排复习。' }
+  study: { label: '背单词', eyebrow: 'A LITTLE, EVERY DAY', title: '每天记一点，<br><em>让词汇真正留下。</em>', description: '选择词书，先回忆再翻面，按记忆情况安排复习。' },
+  profile: { label: '个人数据', eyebrow: 'YOUR PROGRESS', title: '看见每一天，<br><em>积累成长的轨迹。</em>', description: '背词进度、学习趋势与练习记录，全部保存在本机。' },
+  settings: { label: '设置', eyebrow: 'PREFERENCES', title: '配置一次，<br><em>每次都顺手。</em>', description: 'AI 接口、外观主题与本地数据管理。' }
 };
+// Views that work with the imported word list keep the left column visible.
+const WORD_VIEWS = new Set(['story', 'exam', 'translation', 'vocabulary', 'study']);
 
 function showView(name) {
   hideSelectionTranslation();
@@ -240,7 +288,11 @@ function showView(name) {
   $('intro-eyebrow').textContent = views[name].eyebrow;
   $('intro-title').innerHTML = views[name].title;
   $('intro-description').textContent = views[name].description;
+  const usesWords = WORD_VIEWS.has(name);
+  document.querySelector('.columns').classList.toggle('wide', !usesWords);
+  $('resources-toggle').classList.toggle('hidden', !usesWords);
   if (window.matchMedia('(max-width: 820px)').matches) setResourcesVisible(name === 'story');
+  if (name === 'profile') renderProfile();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
@@ -274,7 +326,7 @@ $('generate-exam').addEventListener('click', async () => {
     const result = await post('/api/exam', JSON.stringify({ ...request, exam: $('exam-type').value, topic: $('exam-topic').value.trim() }), { 'Content-Type': 'application/json' });
     latestExam = { ...result, exam: $('exam-type').value };
     renderExam(latestExam);
-    recordActivity('等级考试阅读', result.title, 'exams');
+    latestExam.recordAt = recordActivity('exam', result.title);
     message('exam-message', '试题已生成，完成五题后提交答案。');
   } catch (error) { message('exam-message', error.message, true); }
   finally { $('generate-exam').disabled = false; }
@@ -330,6 +382,11 @@ $('submit-exam').addEventListener('click', () => {
   $('exam-score').textContent = `得分 ${score} / 5  ·  已显示每题解析`;
   $('exam-score').classList.remove('hidden');
   message('exam-message', `已提交：${score}/5 分。`);
+  const record = studyState.activity.find(item => item.kind === 'exam' && item.at === latestExam.recordAt);
+  if (record) {
+    record.score = score;
+    saveStudyState().then(renderProgress).catch(() => {});
+  }
 });
 
 $('toggle-exam-translation').addEventListener('click', () => {
@@ -351,7 +408,7 @@ $('generate-translation').addEventListener('click', async () => {
     const result = await post('/api/translation', JSON.stringify({ ...request, direction: $('translation-direction').value, level: $('translation-level').value, topic: $('translation-topic').value.trim() }), { 'Content-Type': 'application/json' });
     latestTranslation = { ...result, direction: $('translation-direction').value };
     renderTranslation(latestTranslation);
-    recordActivity('翻译训练', result.title, 'translations');
+    recordActivity('translation', result.title);
     message('translation-message', '题目已生成，写完后对照参考答案。');
   } catch (error) { message('translation-message', error.message, true); }
   finally { $('generate-translation').disabled = false; }
@@ -401,7 +458,7 @@ $('generate-vocabulary').addEventListener('click', async () => {
   try {
     const result = await post('/api/vocabulary', JSON.stringify({ ...request, level: $('vocab-level').value, count: Number($('vocab-count').value), topic: $('vocab-topic').value.trim() }), { 'Content-Type': 'application/json' });
     latestVocabulary = result;
-    recordActivity('AI 词表', result.title, 'vocabularies');
+    recordActivity('vocabulary', result.title);
     $('vocab-title').textContent = result.title;
     $('vocab-total').textContent = `${result.items.length} 个词汇`;
     const list = $('vocab-items');
@@ -447,6 +504,7 @@ async function loadStudyData() {
   try {
     const [books, saved] = await Promise.all([getJSON('/api/books'), getJSON('/api/study')]);
     studyState = saved;
+    bookMeta = books.books;
     const select = $('study-book');
     for (const book of books.books) {
       const option = document.createElement('option');
@@ -456,6 +514,7 @@ async function loadStudyData() {
     }
     select.value = saved.activeBook;
     if (!select.value) select.value = 'cet4';
+    renderProgress();
     await loadStudyBook();
   } catch (error) { message('study-message', `读取词书失败：${error.message}`, true); }
 }
@@ -646,7 +705,6 @@ async function rateStudy(remembered) {
   $('remember-study').disabled = true;
   try {
     await saveStudyState();
-    progress.studies++;
     renderProgress();
     renderStudyStats();
     studyIndex++;
@@ -686,34 +744,180 @@ function download(filename, text) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function recordActivity(kind, title, counter) {
-  progress[counter]++;
-  progress.activity.unshift({ kind, title, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) });
-  progress.activity = progress.activity.slice(0, 5);
+function recordActivity(kind, title) {
+  const at = new Date().toISOString();
+  studyState.activity = [...(studyState.activity || []), { kind, title: String(title || '').slice(0, 120), at }].slice(-500);
   renderProgress();
+  saveStudyState().then(renderProgress).catch(error => console.warn('练习记录保存失败', error));
+  return at;
+}
+
+function dateKey(value) {
+  const day = new Date(value);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+}
+function formatActivityTime(iso) {
+  const day = dateKey(iso);
+  const time = new Date(iso).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  if (day === todayISO()) return `今天 ${time}`;
+  if (day === todayISO(-1)) return `昨天 ${time}`;
+  return `${day.slice(5)} ${time}`;
+}
+function activityCounts() {
+  const counts = { story: 0, exam: 0, translation: 0, vocabulary: 0 };
+  for (const item of studyState.activity || []) if (item.kind in counts) counts[item.kind]++;
+  return counts;
+}
+// Per-day totals: flashcards completed (new + review across all books) and AI practices.
+function dailyTotals() {
+  const totals = {};
+  for (const [date, books] of Object.entries(studyState.daily || {})) {
+    let count = 0;
+    for (const book of Object.values(books)) count += (book.new?.length || 0) + (book.review?.length || 0);
+    if (count) totals[date] = { study: count, practice: 0 };
+  }
+  for (const item of studyState.activity || []) {
+    const date = dateKey(item.at);
+    totals[date] ||= { study: 0, practice: 0 };
+    totals[date].practice++;
+  }
+  return totals;
+}
+function renderActivityList(container, items) {
+  container.replaceChildren();
+  if (!items.length) {
+    container.append(make('div', 'empty-activity', '完成一次 AI 练习后，记录会显示在这里。'));
+    return;
+  }
+  for (const item of items) {
+    const row = make('div', 'activity-row');
+    const details = make('div');
+    const label = ACTIVITY_LABELS[item.kind] + (typeof item.score === 'number' ? ` · ${item.score}/5 分` : '');
+    details.append(make('strong', '', label), make('span', '', item.title));
+    row.append(make('span', `activity-dot dot-${item.kind}`, '✓'), details, make('time', '', formatActivityTime(item.at)));
+    container.append(row);
+  }
 }
 
 function renderProgress() {
+  const counts = activityCounts();
   $('stat-words').textContent = selected.size;
-  $('stat-studies').textContent = progress.studies;
-  $('stat-stories').textContent = progress.stories;
-  $('stat-exams').textContent = progress.exams;
-  $('stat-translations').textContent = progress.translations;
-  $('stat-vocabularies').textContent = progress.vocabularies;
-  const list = $('activity-list');
-  list.replaceChildren();
-  if (!progress.activity.length) {
-    list.append(make('div', 'empty-activity', '完成一次练习后，记录会显示在这里。'));
-    return;
-  }
-  for (const item of progress.activity) {
-    const row = make('div', 'activity-row');
-    const details = make('div');
-    details.append(make('strong', '', item.kind), make('span', '', item.title));
-    row.append(make('span', 'activity-dot', '✓'), details, make('time', '', item.time));
-    list.append(row);
-  }
+  $('stat-studies').textContent = dailyTotals()[todayISO()]?.study || 0;
+  $('stat-stories').textContent = counts.story;
+  $('stat-exams').textContent = counts.exam;
+  $('stat-translations').textContent = counts.translation;
+  $('stat-vocabularies').textContent = counts.vocabulary;
+  renderActivityList($('activity-list'), [...(studyState.activity || [])].reverse().slice(0, 5));
+  if (!$('view-profile').classList.contains('hidden')) renderProfile();
 }
+
+function renderAvatar() {
+  $('profile-avatar').textContent = nickname ? [...nickname][0].toUpperCase() : '学';
+}
+function streakDays(totals) {
+  let streak = 0;
+  // Today without activity yet does not break a streak that ended yesterday.
+  let offset = totals[todayISO()] ? 0 : -1;
+  while (totals[todayISO(offset)]) { streak++; offset--; }
+  return streak;
+}
+function renderProfile() {
+  const totals = dailyTotals();
+  const records = Object.values(studyState.progress || {});
+  const activeDates = Object.keys(totals).sort();
+  const exams = (studyState.activity || []).filter(item => item.kind === 'exam' && typeof item.score === 'number');
+  const counts = activityCounts();
+  $('profile-streak').textContent = streakDays(totals);
+  $('profile-since').textContent = activeDates.length ? `从 ${activeDates[0]} 开始学习 · 已坚持 ${activeDates.length} 天` : '开始背词或完成一次练习后，这里会记录你的成长。';
+  $('kpi-learned').textContent = records.filter(item => item.seen > 0).length;
+  $('kpi-mastered').textContent = records.filter(item => item.box >= 4).length;
+  $('kpi-today').textContent = totals[todayISO()]?.study || 0;
+  $('kpi-days').textContent = activeDates.length;
+  $('kpi-practice').textContent = (studyState.activity || []).length;
+  $('kpi-exam').textContent = exams.length ? (exams.reduce((sum, item) => sum + item.score, 0) / exams.length).toFixed(1) : '—';
+
+  const chart = $('trend-chart');
+  chart.replaceChildren();
+  const days = Array.from({ length: 30 }, (_, index) => todayISO(index - 29));
+  const peak = Math.max(1, ...days.map(day => (totals[day]?.study || 0) + (totals[day]?.practice || 0) * 5));
+  for (const day of days) {
+    const value = totals[day] || { study: 0, practice: 0 };
+    const column = make('div', 'trend-column' + (day === todayISO() ? ' today' : ''));
+    column.title = `${day}：背词 ${value.study} 个，练习 ${value.practice} 次`;
+    const practice = make('span', 'trend-practice');
+    practice.style.height = `${(value.practice * 5) / peak * 100}%`;
+    const study = make('span', 'trend-study');
+    study.style.height = `${value.study / peak * 100}%`;
+    column.append(practice, study);
+    chart.append(column);
+  }
+  $('trend-start').textContent = days[0].slice(5);
+
+  const learnedByBook = {};
+  for (const [key, record] of Object.entries(studyState.progress || {})) {
+    if (!(record.seen > 0)) continue;
+    const book = key.split(':')[0];
+    learnedByBook[book] = (learnedByBook[book] || 0) + 1;
+  }
+  const books = [{ id: 'custom', title: '我的词表', count: (studyState.custom || []).length }, ...bookMeta];
+  const bookList = $('book-progress');
+  bookList.replaceChildren();
+  for (const book of books) {
+    const learned = learnedByBook[book.id] || 0;
+    const percent = book.count ? Math.min(100, Math.round(learned / book.count * 100)) : 0;
+    const row = make('div', 'book-row' + (learned ? '' : ' idle'));
+    const head = make('div', 'book-row-head');
+    head.append(make('strong', '', book.title), make('span', '', `${learned} / ${book.count} · ${percent}%`));
+    const bar = make('div', 'book-bar');
+    const fill = make('span');
+    fill.style.width = `${percent}%`;
+    bar.append(fill);
+    row.append(head, bar);
+    bookList.append(row);
+  }
+
+  const breakdown = $('practice-breakdown');
+  breakdown.replaceChildren();
+  for (const [kind, label] of Object.entries(ACTIVITY_LABELS)) {
+    const cell = make('div', `breakdown-${kind}`);
+    cell.append(make('strong', '', String(counts[kind])), make('span', '', label));
+    breakdown.append(cell);
+  }
+  renderActivityList($('profile-activity'), [...(studyState.activity || [])].reverse().slice(0, 10));
+}
+
+let nicknameTimer;
+$('profile-nickname').addEventListener('input', () => {
+  nickname = $('profile-nickname').value.trim().slice(0, 30);
+  renderAvatar();
+  clearTimeout(nicknameTimer);
+  nicknameTimer = setTimeout(() => { scheduleSave(); message('profile-name-status', '已保存'); }, 500);
+});
+
+$('export-data').addEventListener('click', () => {
+  const payload = { app: 'VocabStudio', exported_at: new Date().toISOString(), settings: { api_url: endpoint($('api-url').value), model: $('model').value.trim(), theme: document.body.dataset.theme, nickname }, study: studyState };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `词页学习数据-${todayISO()}.json`;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  message('data-message', '已导出学习数据（不含 API Key）。');
+});
+$('clear-activity').addEventListener('click', async () => {
+  if (!(studyState.activity || []).length) return message('data-message', '当前没有练习记录。');
+  if (!confirm('确定清空全部 AI 练习记录吗？背词进度不受影响。')) return;
+  const previous = studyState.activity;
+  studyState.activity = [];
+  try {
+    await saveStudyState();
+    renderProgress();
+    message('data-message', '练习记录已清空。');
+  } catch (error) {
+    studyState.activity = previous;
+    message('data-message', `清空失败：${error.message}`, true);
+  }
+});
 
 renderProgress();
 showView('home');

@@ -12,6 +12,7 @@ DEFAULTS = {
     "api_url": "http://127.0.0.1:5178/v1/chat/completions",
     "model": "",
     "theme": "light",
+    "nickname": "",
 }
 
 
@@ -45,7 +46,10 @@ def save_settings(path: Path, data: dict) -> dict:
     theme = data.get("theme")
     if theme not in {"light", "dark"}:
         raise ValueError("主题设置无效。")
-    result = {"api_url": api_url, "model": model, "theme": theme}
+    nickname = str(data.get("nickname") or "").strip()
+    if len(nickname) > 30:
+        raise ValueError("昵称最多 30 个字符。")
+    result = {"api_url": api_url, "model": model, "theme": theme, "nickname": nickname}
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")

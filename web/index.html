@@ -19,14 +19,17 @@
       <button class="nav-item" data-view="translation"><span>文</span> 翻译训练 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="vocabulary"><span>✧</span> AI 生成词表 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="study"><span>▣</span> 背单词 <span class="nav-arrow">↗</span></button>
+      <div class="side-section side-section-gap">我的</div>
+      <button class="nav-item" data-view="profile"><span>◔</span> 个人数据 <span class="nav-arrow">↗</span></button>
+      <button class="nav-item" data-view="settings"><span>⚙</span> 设置 <span class="nav-arrow">↗</span></button>
       <div class="side-tip"><div class="tip-icon">✦</div><strong>从记住到会用</strong><p>短文阅读、考试练习与翻译训练，都可以用你的目标词。</p></div>
-      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.0.1</span></div>
+      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.1.0</span></div>
     </aside>
 
     <main class="workspace">
-      <header class="topbar"><div class="breadcrumbs">工作台 <span>/</span> <strong id="breadcrumb-current">总览</strong></div><div class="top-actions"><button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换深色模式">☾ 深色模式</button><div class="top-badge">✦ 为你的词表而写</div></div></header>
+      <header class="topbar"><div class="breadcrumbs">工作台 <span>/</span> <strong id="breadcrumb-current">总览</strong></div><div class="top-actions"><span id="api-chip" class="api-chip" title="当前 AI 接口">● 未配置接口</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换深色模式">☾ 深色模式</button><button class="theme-toggle top-settings" type="button" data-view="settings" aria-label="打开设置">⚙ 设置</button></div></header>
       <div class="content">
-        <div class="mobile-nav" aria-label="练习模式"><button class="mode-button active" data-view="home">总览</button><button class="mode-button" data-view="study">背单词</button><button class="mode-button" data-view="story">阅读短文</button><button class="mode-button" data-view="exam">等级考试阅读</button><button class="mode-button" data-view="translation">翻译训练</button><button class="mode-button" data-view="vocabulary">AI 词表</button><button id="resources-toggle" class="mode-button resource-toggle" aria-expanded="false">词表与接口</button></div>
+        <div class="mobile-nav" aria-label="练习模式"><button class="mode-button active" data-view="home">总览</button><button class="mode-button" data-view="study">背单词</button><button class="mode-button" data-view="story">阅读短文</button><button class="mode-button" data-view="exam">等级考试阅读</button><button class="mode-button" data-view="translation">翻译训练</button><button class="mode-button" data-view="vocabulary">AI 词表</button><button class="mode-button" data-view="profile">个人数据</button><button class="mode-button" data-view="settings">设置</button><button id="resources-toggle" class="mode-button resource-toggle" aria-expanded="false">我的词表</button></div>
         <div class="intro"><div><span id="intro-eyebrow" class="eyebrow">YOUR ENGLISH PRACTICE STUDIO</span><h1 id="intro-title">从认识一个词，<br><em>走向真正会用。</em></h1><p id="intro-description">从词汇积累到阅读、考试与翻译，串起你的英语学习。</p></div><div class="intro-ornament" aria-hidden="true"><span>ab</span><span>→</span><span>📖</span></div></div>
 
         <div class="columns">
@@ -46,16 +49,6 @@
               <div id="word-list" class="word-list"><div class="empty-words">还没有单词<br><small>先导入一份词表吧</small></div></div>
               <div class="selection-footer"><span>已选择 <strong id="selected-count">0</strong> 个单词</span><span id="total-count">共 0 个</span></div>
             </section>
-
-            <section class="card api-card">
-              <div class="card-head"><span class="step">⚙</span><div><h2>AI 接口</h2><p>所有模式共用这组配置</p></div></div>
-              <div class="preset-row"><button class="preset active" data-workbuddy="true" data-url="http://127.0.0.1:5178/v1/chat/completions">Buddy Desktop</button><button class="preset" data-url="http://127.0.0.1:11434/v1/chat/completions" data-model="llama3.2">Ollama 本地</button><button class="preset" data-url="https://api.openai.com/v1/chat/completions" data-model="gpt-4.1-mini">OpenAI</button><button class="preset" data-custom="true">自定义</button></div>
-              <div class="connection-row"><button id="detect-workbuddy" class="button button-subtle" type="button">检测 Buddy 与模型</button><span id="buddy-status" class="message" role="status">可一键读取本机代理模型</span></div>
-              <label class="field">API URL<input id="api-url" type="url" spellcheck="false" value="http://127.0.0.1:5178/v1/chat/completions" placeholder="https://example.com/v1/chat/completions"></label>
-              <label class="field">模型名称<input id="model" spellcheck="false" list="model-options" placeholder="检测后选择或手动输入"><datalist id="model-options"></datalist></label>
-              <label class="field">API Key <span>可选</span><input id="api-key" type="password" autocomplete="off" placeholder="无需密钥可留空"></label>
-              <p class="privacy-note">URL、模型和主题会保存在本机；Key 不保存。Buddy Desktop 本机代理通常无需填写 Key。</p>
-            </section>
           </div>
 
           <div class="right-column">
@@ -71,8 +64,8 @@
                 </div>
               </section>
               <section class="card progress-card">
-                <div class="card-head"><span class="step">↗</span><div><h2>本次练习</h2><p>当前应用会话的进度</p></div></div>
-                <div class="progress-grid"><div><strong id="stat-words">0</strong><span>已选单词</span></div><div><strong id="stat-studies">0</strong><span>背词卡片</span></div><div><strong id="stat-stories">0</strong><span>生成短文</span></div><div><strong id="stat-exams">0</strong><span>阅读练习</span></div><div><strong id="stat-translations">0</strong><span>翻译练习</span></div><div><strong id="stat-vocabularies">0</strong><span>生成词表</span></div></div>
+                <div class="card-head"><span class="step">↗</span><div><h2>学习记录</h2><p>累计数据，保存在本机</p></div><button class="link-button card-link" data-view="profile">查看个人数据 →</button></div>
+                <div class="progress-grid"><div><strong id="stat-words">0</strong><span>已选单词</span></div><div><strong id="stat-studies">0</strong><span>今日背词</span></div><div><strong id="stat-stories">0</strong><span>生成短文</span></div><div><strong id="stat-exams">0</strong><span>阅读练习</span></div><div><strong id="stat-translations">0</strong><span>翻译练习</span></div><div><strong id="stat-vocabularies">0</strong><span>生成词表</span></div></div>
                 <div id="activity-list" class="activity-list"><div class="empty-activity">完成一次练习后，记录会显示在这里。</div></div>
               </section>
             </div>
@@ -164,6 +157,80 @@
                 <div class="flashcard"><span class="flashcard-label">TODAY'S WORD</span><h2 id="study-word"></h2><p id="study-phonetic"></p><div id="study-answer" class="study-answer hidden"><strong id="study-meaning"></strong><span id="study-answer-note"></span></div></div>
                 <div class="study-controls"><button id="reveal-study" class="button button-primary">显示释义</button><button id="again-study" class="button button-subtle hidden">再复习</button><button id="remember-study" class="button button-primary hidden">记住了</button></div>
                 <p class="exercise-hint">空格显示释义；显示后按 1 再复习、按 2 记住了。</p>
+              </section>
+            </div>
+
+            <div id="view-profile" class="mode-view hidden">
+              <section class="card profile-hero">
+                <div class="profile-avatar" id="profile-avatar" aria-hidden="true">学</div>
+                <div class="profile-identity">
+                  <span class="eyebrow">MY LEARNING PROFILE</span>
+                  <div class="profile-name-row"><input id="profile-nickname" maxlength="30" placeholder="给自己起个昵称" aria-label="昵称"><span id="profile-name-status" class="message" role="status"></span></div>
+                  <p id="profile-since">开始学习后，这里会记录你的成长。</p>
+                </div>
+                <div class="profile-streak"><strong id="profile-streak">0</strong><span>连续学习天数</span></div>
+              </section>
+
+              <section class="card">
+                <div class="card-head"><span class="step">◔</span><div><h2>学习概况</h2><p>所有数据仅保存在本机</p></div></div>
+                <div class="kpi-grid">
+                  <div><strong id="kpi-learned">0</strong><span>累计学过单词</span></div>
+                  <div><strong id="kpi-mastered">0</strong><span>已掌握（间隔 ≥ 8 天）</span></div>
+                  <div><strong id="kpi-today">0</strong><span>今日背词</span></div>
+                  <div><strong id="kpi-days">0</strong><span>累计学习天数</span></div>
+                  <div><strong id="kpi-practice">0</strong><span>AI 练习次数</span></div>
+                  <div><strong id="kpi-exam">—</strong><span>考试阅读平均分</span></div>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-head chart-head"><span class="step">▥</span><div><h2>近 30 天学习趋势</h2><p>每天背词数（新词 + 复习）与 AI 练习次数</p></div><div class="chart-legend"><span class="legend-study">背词</span><span class="legend-practice">练习</span></div></div>
+                <div id="trend-chart" class="trend-chart" role="img" aria-label="近 30 天学习趋势"></div>
+                <div class="trend-axis"><span id="trend-start"></span><span>今天</span></div>
+              </section>
+
+              <div class="profile-columns">
+                <section class="card">
+                  <div class="card-head"><span class="step">▣</span><div><h2>词书进度</h2><p>已学 / 总词数</p></div></div>
+                  <div id="book-progress" class="book-progress"><div class="empty-activity">正在读取词书…</div></div>
+                </section>
+                <section class="card">
+                  <div class="card-head"><span class="step">✓</span><div><h2>练习记录</h2><p>最近 10 次 AI 练习</p></div></div>
+                  <div id="practice-breakdown" class="practice-breakdown"></div>
+                  <div id="profile-activity" class="activity-list"></div>
+                </section>
+              </div>
+            </div>
+
+            <div id="view-settings" class="mode-view hidden">
+              <section class="card api-card">
+                <div class="card-head"><span class="step">⚙</span><div><h2>AI 接口</h2><p>阅读、考试、翻译、词表与划词翻译共用这组配置</p></div><span id="api-state" class="api-state">未检测</span></div>
+                <div class="settings-label">快速选择</div>
+                <div class="preset-row"><button class="preset active" data-workbuddy="true" data-url="http://127.0.0.1:5178/v1/chat/completions">Buddy Desktop</button><button class="preset" data-url="http://127.0.0.1:11434/v1/chat/completions" data-model="llama3.2">Ollama 本地</button><button class="preset" data-url="https://api.openai.com/v1/chat/completions" data-model="gpt-4.1-mini">OpenAI</button><button class="preset" data-custom="true">自定义</button></div>
+                <div class="settings-fields">
+                  <label class="field field-wide">API URL<input id="api-url" type="url" spellcheck="false" value="http://127.0.0.1:5178/v1/chat/completions" placeholder="https://example.com/v1/chat/completions"></label>
+                  <label class="field">模型名称<input id="model" spellcheck="false" list="model-options" placeholder="检测后选择或手动输入"><datalist id="model-options"></datalist></label>
+                  <label class="field">API Key <span>可选</span><input id="api-key" type="password" autocomplete="off" placeholder="无需密钥可留空"></label>
+                </div>
+                <div class="connection-row"><button id="detect-workbuddy" class="button button-subtle" type="button">检测 Buddy 与模型</button><button id="test-api" class="button button-primary" type="button">测试连接</button><span id="buddy-status" class="message" role="status">可一键读取本机代理模型</span></div>
+                <p class="privacy-note">URL 与模型会保存在本机；API Key 只保留在本次运行的内存中，不写入磁盘。Buddy Desktop 本机代理通常无需填写 Key。</p>
+              </section>
+
+              <section class="card">
+                <div class="card-head"><span class="step">◐</span><div><h2>外观</h2><p>选择界面配色，设置会跨启动保留</p></div></div>
+                <div class="theme-options" role="radiogroup" aria-label="主题">
+                  <button class="theme-option" data-theme-choice="light" role="radio" aria-checked="true"><span class="theme-swatch swatch-light"></span><strong>浅色</strong><small>明亮清爽，适合白天</small></button>
+                  <button class="theme-option" data-theme-choice="dark" role="radio" aria-checked="false"><span class="theme-swatch swatch-dark"></span><strong>深色</strong><small>低亮度，适合夜间</small></button>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-head"><span class="step">⛁</span><div><h2>数据与隐私</h2><p>学习记录保存在 %LOCALAPPDATA%\VocabStudio</p></div></div>
+                <div class="data-actions">
+                  <div><strong>导出学习数据</strong><small>背词进度、计划、我的词表与练习记录（JSON）</small></div><button id="export-data" class="button button-subtle" type="button">↓ 导出</button>
+                  <div><strong>清空练习记录</strong><small>只删除 AI 练习历史，不影响背词进度</small></div><button id="clear-activity" class="button button-danger" type="button">清空</button>
+                </div>
+                <p id="data-message" class="message" role="status"></p>
               </section>
             </div>
           </div>
