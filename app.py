@@ -31,6 +31,30 @@ MIME = {".html": "text/html", ".css": "text/css", ".js": "text/javascript"}
 _buddy_process: subprocess.Popen | None = None
 
 
+class DesktopApi:
+    def __init__(self):
+        self.window = None
+
+    def export_reading_word(self, payload: dict, filename: str) -> dict:
+        if self.window is None:
+            raise RuntimeError("桌面窗口尚未准备好。")
+        if filename not in {"阅读短文.docx", "等级考试阅读.docx"}:
+            raise ValueError("无效的导出文件名。")
+        document = build_reading_docx(payload)
+        selection = self.window.create_file_dialog(
+            webview.FileDialog.SAVE,
+            save_filename=filename,
+            file_types=("Word 文档 (*.docx)",),
+        )
+        if not selection:
+            return {"saved": False}
+        path = Path(selection[0] if isinstance(selection, (tuple, list)) else selection)
+        if path.suffix.lower() != ".docx":
+            path = path.with_suffix(".docx")
+        path.write_bytes(document)
+        return {"saved": True, "path": str(path)}
+
+
 def workbuddy_status() -> dict:
     try:
         port = int(os.environ.get("BUDDY_DESKTOP_PORT", "5178"))
@@ -271,7 +295,9 @@ def main():
     thread.start()
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     try:
-        webview.create_window("词页 · 英语练习工作台", url, width=1280, height=820, min_size=(760, 560), background_color="#f7f8f4")
+        desktop_api = DesktopApi()
+        window = webview.create_window("词页 · 英语练习工作台", url, width=1280, height=820, min_size=(760, 560), background_color="#f7f8f4", js_api=desktop_api)
+        desktop_api.window = window
         webview.start(gui="edgechromium")
     finally:
         server.shutdown()

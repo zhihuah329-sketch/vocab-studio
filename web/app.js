@@ -520,8 +520,9 @@ $('download-exam-word').addEventListener('click', async () => {
   const button = $('download-exam-word');
   button.disabled = true;
   try {
-    await downloadReadingWord('等级考试阅读.docx', { kind: 'exam', title: latestExam.title, exam: latestExam.exam,
+    const result = await downloadReadingWord('等级考试阅读.docx', { kind: 'exam', title: latestExam.title, exam: latestExam.exam,
       passage: latestExam.passage, translation: latestExam.translation, questions: latestExam.questions });
+    if (result.saved) message('exam-message', 'Word 文档已导出。');
   } catch (error) { message('exam-message', `Word 导出失败：${error.message}`, true); }
   finally { button.disabled = false; }
 });
@@ -1026,6 +1027,9 @@ function download(filename, text) {
 }
 
 async function downloadReadingWord(filename, payload) {
+  if (window.pywebview?.api?.export_reading_word) {
+    return await window.pywebview.api.export_reading_word(payload, filename);
+  }
   const response = await fetch('/api/export/docx', { method: 'POST',
     headers: { 'X-App-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   if (!response.ok) {
@@ -1038,6 +1042,7 @@ async function downloadReadingWord(filename, payload) {
   anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return { saved: true };
 }
 
 function recordActivity(kind, title, score = null) {
@@ -1330,8 +1335,9 @@ $('download-word').addEventListener('click', async () => {
   const button = $('download-word');
   button.disabled = true;
   try {
-    await downloadReadingWord('阅读短文.docx', { kind: 'story', title: latest.title, passage: latest.passage,
+    const result = await downloadReadingWord('阅读短文.docx', { kind: 'story', title: latest.title, passage: latest.passage,
       translation: latest.translation, words: latest.words });
+    if (result.saved) message('generate-message', 'Word 文档已导出。');
   } catch (error) { message('generate-message', `Word 导出失败：${error.message}`, true); }
   finally { button.disabled = false; }
 });

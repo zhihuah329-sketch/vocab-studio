@@ -5,10 +5,10 @@ import urllib.error
 import urllib.request
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from app import main, make_handler, start_workbuddy, workbuddy_status
+from app import DesktopApi, main, make_handler, start_workbuddy, workbuddy_status
 from core import english_word_count, generate_exam
 
 
@@ -51,6 +51,29 @@ class FakeProvider(BaseHTTPRequestHandler):
 
 
 class ApiTests(unittest.TestCase):
+    def test_desktop_word_export_uses_save_dialog(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "reading.docx"
+            api = DesktopApi()
+            api.window = MagicMock()
+            api.window.create_file_dialog.return_value = (str(target),)
+            result = api.export_reading_word({
+                "kind": "story", "title": "A Journey", "passage": "A short passage.",
+                "translation": "一段短文。", "words": ["journey"],
+            }, "阅读短文.docx")
+            self.assertTrue(result["saved"])
+            self.assertEqual(target.read_bytes()[:2], b"PK")
+            api.window.create_file_dialog.assert_called_once()
+
+    def test_desktop_word_export_can_be_cancelled(self):
+        api = DesktopApi()
+        api.window = MagicMock()
+        api.window.create_file_dialog.return_value = None
+        self.assertEqual(api.export_reading_word({
+            "kind": "story", "title": "A Journey", "passage": "A short passage.",
+            "translation": "一段短文。", "words": [],
+        }, "阅读短文.docx"), {"saved": False})
+
     def test_word_export_is_downloadable_and_token_protected(self):
         app = ThreadingHTTPServer(("127.0.0.1", 0), make_handler("test-token"))
         thread = threading.Thread(target=app.serve_forever, daemon=True)
