@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from app import main, make_handler, workbuddy_status
+from app import main, make_handler, start_workbuddy, workbuddy_status
 
 
 class FakeProvider(BaseHTTPRequestHandler):
@@ -38,6 +38,18 @@ class FakeProvider(BaseHTTPRequestHandler):
 
 
 class ApiTests(unittest.TestCase):
+    def test_buddy_starts_headless_cli(self):
+        with patch("app.workbuddy_status", return_value={"available": False}), \
+             patch("app.Path.is_file", return_value=True), \
+             patch("app.subprocess.Popen") as launch:
+            result = start_workbuddy()
+        self.assertTrue(result["starting"])
+        command = launch.call_args.args[0]
+        self.assertTrue(command[0].endswith("electron.exe"))
+        self.assertTrue(command[1].endswith("cli.js"))
+        self.assertEqual(command[-2:], ["--host", "127.0.0.1"])
+        self.assertEqual(launch.call_args.kwargs["env"]["ELECTRON_RUN_AS_NODE"], "1")
+
     def test_buddy_detection_uses_v1_not_html_health_page(self):
         class BuddyProvider(BaseHTTPRequestHandler):
             def log_message(self, *_):
@@ -99,6 +111,11 @@ class ApiTests(unittest.TestCase):
             common = {"api_url": f"http://127.0.0.1:{provider.server_address[1]}/v1/chat/completions", "model": "custom-model", "api_key": "", "words": []}
             exam = post("/api/exam", json.dumps({**common, "exam": "英语四级", "topic": "travel"}).encode(), {"Content-Type": "application/json"})
             self.assertEqual(len(exam["questions"]), 5)
+            for track in ("考研英语一", "考研英语二"):
+                exam = post("/api/exam", json.dumps({**common, "exam": track, "topic": "education"}).encode(), {"Content-Type": "application/json"})
+                self.assertEqual(len(exam["questions"]), 5)
+                sent = json.loads(FakeProvider.received["body"]["messages"][1]["content"])
+                self.assertEqual(sent["exam_type"], track)
             exercise = post("/api/translation", json.dumps({**common, "direction": "zh-en", "level": "B1", "topic": "travel"}).encode(), {"Content-Type": "application/json"})
             self.assertEqual(len(exercise["items"]), 5)
             vocabulary = post("/api/vocabulary", json.dumps({**common, "level": "B1", "count": 20, "topic": "travel"}).encode(), {"Content-Type": "application/json"})

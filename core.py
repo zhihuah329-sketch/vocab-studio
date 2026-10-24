@@ -148,7 +148,7 @@ def generate_passage(api_url: str, model: str, api_key: str, words: list[str], l
     return result
 
 
-EXAM_LEVELS = {"高考", "英语四级", "英语六级", "考研英语", "雅思"}
+EXAM_LEVELS = {"高考", "英语四级", "英语六级", "考研英语", "考研英语一", "考研英语二", "雅思"}
 
 
 def generate_exam(api_url: str, model: str, api_key: str, exam: str, topic: str, words: list[str]) -> dict:
@@ -156,7 +156,7 @@ def generate_exam(api_url: str, model: str, api_key: str, exam: str, topic: str,
         raise ValueError("不支持这个考试类型。")
     result = chat_json(
         api_url, model, api_key,
-        "Create an original English exam-style reading exercise for Chinese learners. It must be an original practice exercise, not copied from any real exam. Return only JSON: title (string), passage (string, 300-450 English words), translation (Simplified Chinese string), questions (array of exactly 5 objects). Each question object has stem (English string), options (array of exactly 4 English strings in A/B/C/D order), answer (one uppercase letter A/B/C/D), explanation (Simplified Chinese string explaining the correct option). Mix main idea, detail, inference, and vocabulary questions. Ensure each answer is unambiguous and supported by the passage. Use supplied target words where natural. No markdown.",
+        "Create an original English exam-style reading exercise for Chinese learners. If the exam type is postgraduate English I or II, use the corresponding difficulty and academic reading style. It must be an original practice exercise, not copied from any real exam. Return only JSON: title (string), passage (string, 300-450 English words), translation (Simplified Chinese string), questions (array of exactly 5 objects). Each question object has stem (English string), options (array of exactly 4 English strings in A/B/C/D order), answer (one uppercase letter A/B/C/D), explanation (Simplified Chinese string explaining the correct option). Mix main idea, detail, inference, and vocabulary questions. Ensure each answer is unambiguous and supported by the passage. Use supplied target words where natural. No markdown.",
         {"exam_type": exam, "topic": topic or "choose a realistic topic", "target_words_if_natural": words},
     )
     require_strings(result, "title", "passage", "translation")

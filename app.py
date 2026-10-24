@@ -27,6 +27,7 @@ WEB = ROOT / "web"
 BOOKS = ROOT / "data" / "wordbooks.json"
 MAX_BODY = 8 * 1024 * 1024
 MIME = {".html": "text/html", ".css": "text/css", ".js": "text/javascript"}
+_buddy_process: subprocess.Popen | None = None
 
 
 def workbuddy_status() -> dict:
@@ -51,19 +52,36 @@ def workbuddy_status() -> dict:
 
 
 def start_workbuddy() -> dict:
+    global _buddy_process
     status = workbuddy_status()
     if status["available"]:
         return status
-    executable = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "BuddyDesktop" / "electron.exe"
-    if not executable.is_file():
-        raise ValueError("未找到已安装的 Buddy Desktop。请先安装并登录一次。")
+    if _buddy_process and _buddy_process.poll() is None:
+        return {"starting": True, "message": "Buddy 本机代理正在后台启动。"}
+    install_dir = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "BuddyDesktop"
+    executable = install_dir / "electron.exe"
+    cli = install_dir / "resources" / "app" / "node_modules" / "@buddy-desktop" / "server" / "src" / "cli.js"
+    if not executable.is_file() or not cli.is_file():
+        raise ValueError("未找到 Buddy 本机代理。请先安装并登录 Buddy Desktop。")
+    try:
+        port = int(os.environ.get("BUDDY_DESKTOP_PORT", "5178"))
+        if not 1 <= port <= 65535:
+            raise ValueError
+    except ValueError:
+        port = 5178
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     startup = subprocess.STARTUPINFO() if os.name == "nt" else None
     if startup:
         startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startup.wShowWindow = 0
-    subprocess.Popen([str(executable)], cwd=str(executable.parent), creationflags=flags, startupinfo=startup, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return {"starting": True, "message": "已尝试启动 Buddy Desktop，请稍等后重新检测。首次登录可能仍需打开 Buddy 窗口。"}
+    environment = os.environ.copy()
+    environment["ELECTRON_RUN_AS_NODE"] = "1"
+    _buddy_process = subprocess.Popen(
+        [str(executable), str(cli), "--port", str(port), "--host", "127.0.0.1"],
+        cwd=str(cli.parent), env=environment, creationflags=flags,
+        startupinfo=startup, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    return {"starting": True, "message": "Buddy 本机代理正在后台启动，无需打开 Buddy 主窗口。"}
 
 
 def dictionary_entry(word: str) -> dict:
@@ -232,6 +250,8 @@ def main():
     finally:
         server.shutdown()
         server.server_close()
+        if _buddy_process and _buddy_process.poll() is None:
+            _buddy_process.terminate()
 
 
 if __name__ == "__main__":

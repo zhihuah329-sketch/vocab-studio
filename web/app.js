@@ -192,8 +192,8 @@ document.querySelectorAll('.preset').forEach(button => button.addEventListener('
   scheduleSave();
   if (button.dataset.workbuddy) detectWorkbuddy(true);
 }));
-$('api-url').addEventListener('input', () => { syncPreset(); scheduleSave(); });
-$('model').addEventListener('input', () => { syncPreset(); scheduleSave(); });
+$('api-url').addEventListener('input', () => { syncPreset(); updateBuddyModelSelection(); scheduleSave(); });
+$('model').addEventListener('input', () => { syncPreset(); updateBuddyModelSelection(); scheduleSave(); });
 
 async function detectWorkbuddy(select) {
   message('buddy-status', '正在检测本机代理…');
@@ -202,6 +202,8 @@ async function detectWorkbuddy(select) {
     const result = await response.json();
     if (!result.available) {
       setApiState('未连接', 'error');
+      setBuddyCardState('未连接', 'error');
+      $('buddy-model-list').replaceChildren(document.createTextNode('后台代理未就绪；点击下方按钮启动后重试。'));
       message('buddy-status', result.message, true);
       if (!select && !buddyAutoStartAttempted && $('api-url').value.includes('127.0.0.1:5178')) {
         buddyAutoStartAttempted = true;
@@ -215,21 +217,77 @@ async function detectWorkbuddy(select) {
     }
     const options = $('model-options');
     options.replaceChildren();
+    const modelList = $('buddy-model-list');
+    modelList.replaceChildren();
     for (const name of result.models) {
       const option = document.createElement('option');
       option.value = name;
       options.append(option);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'buddy-model';
+      button.textContent = name;
+      button.addEventListener('click', () => {
+        $('api-url').value = result.api_url;
+        $('model').value = name;
+        syncPreset();
+        scheduleSave();
+        updateBuddyModelSelection();
+        message('buddy-status', `已选择 Buddy 模型：${name}`);
+      });
+      modelList.append(button);
     }
+    if (!result.models.length) modelList.append(document.createTextNode('当前没有可用模型，请在 Buddy 管理面板中检查账号状态。'));
     if (select || $('api-url').value === result.api_url) {
       $('api-url').value = result.api_url;
       if (!$('model').value || !result.models.includes($('model').value)) $('model').value = result.models[0] || '';
       syncPreset();
       scheduleSave();
     }
+    updateBuddyModelSelection();
     message('buddy-status', result.models.length ? `已识别 Buddy，找到 ${result.models.length} 个模型` : '已识别 Buddy，暂无可用模型');
     setApiState(result.models.length ? 'Buddy 已连接' : 'Buddy 无模型', result.models.length ? 'ok' : 'error');
-  } catch (error) { setApiState('检测失败', 'error'); message('buddy-status', `检测失败：${error.message}`, true); }
+    setBuddyCardState(result.models.length ? '已连接' : '无模型', result.models.length ? 'ok' : 'error');
+  } catch (error) { setApiState('检测失败', 'error'); setBuddyCardState('检测失败', 'error'); message('buddy-status', `检测失败：${error.message}`, true); }
 }
+function setBuddyCardState(label, kind = '') {
+  const node = $('buddy-card-state');
+  node.textContent = label;
+  node.className = `api-state ${kind}`;
+}
+function updateBuddyModelSelection() {
+  document.querySelectorAll('.buddy-model').forEach(button => {
+    const active = $('model').value === button.textContent && $('api-url').value.includes('127.0.0.1:5178');
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+$('buddy-open-panel').addEventListener('click', async () => {
+  const panel = $('buddy-panel');
+  if (!panel.classList.contains('hidden')) {
+    panel.classList.add('hidden');
+    $('buddy-open-panel').textContent = '展开 Buddy 管理面板';
+    $('buddy-open-panel').setAttribute('aria-expanded', 'false');
+    return;
+  }
+  try {
+    const result = await post('/api/workbuddy/start', '{}', { 'Content-Type': 'application/json' });
+    if (result.starting) await new Promise(resolve => setTimeout(resolve, 3000));
+    const ready = await getJSON('/api/workbuddy');
+    if (!ready.available) throw new Error(ready.message || 'Buddy 代理尚未启动。');
+    await detectWorkbuddy(false);
+    const frame = $('buddy-panel-frame');
+    if (!frame.src) frame.src = 'http://127.0.0.1:5178/';
+    panel.classList.remove('hidden');
+    $('buddy-open-panel').textContent = '收起 Buddy 管理面板';
+    $('buddy-open-panel').setAttribute('aria-expanded', 'true');
+  } catch (error) { message('buddy-status', error.message, true); }
+});
+$('buddy-refresh-panel').addEventListener('click', () => {
+  detectWorkbuddy(false);
+  const frame = $('buddy-panel-frame');
+  if (frame.src) frame.src = 'http://127.0.0.1:5178/?refresh=' + Date.now();
+});
 $('detect-workbuddy').addEventListener('click', () => detectWorkbuddy(true));
 $('start-workbuddy').addEventListener('click', async () => {
   message('buddy-status', '正在启动 Buddy…');
@@ -296,6 +354,7 @@ const views = {
   home: { label: '总览', eyebrow: 'YOUR ENGLISH PRACTICE STUDIO', title: '从认识一个词，<br><em>走向真正会用。</em>', description: '从词汇积累到阅读、考试与翻译，串起你的英语学习。' },
   story: { label: '阅读短文', eyebrow: 'YOUR WORDS, YOUR STORY', title: '把今天的单词，<br><em>读成一篇故事。</em>', description: '导入词表，选择目标词，生成专属英文阅读材料。' },
   exam: { label: '等级考试阅读', eyebrow: 'READ · THINK · ANSWER', title: '读一篇文章，<br><em>练一场考试。</em>', description: '选择考试类型，完成原创模拟阅读与五道选择题。' },
+  kaoyan: { label: '考研英语', eyebrow: 'POSTGRADUATE ENGLISH', title: '为考研做准备，<br><em>从今天这一篇开始。</em>', description: '英语一/二阅读、翻译和考研词汇计划集中练习。' },
   translation: { label: '翻译训练', eyebrow: 'FROM WORDS TO EXPRESSION', title: '把理解写出来，<br><em>让表达更准确。</em>', description: '汉译英或英译汉，先独立作答，再对照参考译文。' },
   vocabulary: { label: 'AI 生成词表', eyebrow: 'BUILD YOUR WORD BANK', title: '选一个方向，<br><em>生成下一份词表。</em>', description: '按等级和主题生成词汇、释义与例句，直接加入练习。' },
   study: { label: '背单词', eyebrow: 'A LITTLE, EVERY DAY', title: '每天记一点，<br><em>让词汇真正留下。</em>', description: '选择词书，先回忆再翻面，按记忆情况安排复习。' },
@@ -321,6 +380,23 @@ function showView(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+$('kaoyan-reading').addEventListener('click', () => {
+  $('exam-type').value = $('kaoyan-track').value;
+  showView('exam');
+  $('generate-exam').click();
+});
+$('kaoyan-translation').addEventListener('click', () => {
+  $('translation-direction').value = 'en-zh';
+  $('translation-level').value = '考研英语';
+  showView('translation');
+  $('generate-translation').click();
+});
+$('kaoyan-study').addEventListener('click', async () => {
+  await studyReady;
+  showView('study');
+  $('study-book').value = 'ky';
+  await loadStudyBook();
+});
 
 function setResourcesVisible(visible) {
   $('resources').classList.toggle('resources-collapsed', !visible);
@@ -811,7 +887,7 @@ document.addEventListener('keydown', event => {
   if (event.key === '1' && !$('again-study').classList.contains('hidden')) $('again-study').click();
   if (event.key === '2' && !$('remember-study').classList.contains('hidden')) $('remember-study').click();
 });
-loadStudyData();
+const studyReady = loadStudyData();
 
 $('download-vocabulary').addEventListener('click', () => {
   if (!latestVocabulary) return;

@@ -16,6 +16,7 @@
       <button class="nav-item active" data-view="home"><span>◈</span> 总览 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="story"><span>▦</span> 阅读短文 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="exam"><span>▤</span> 等级考试阅读 <span class="nav-arrow">↗</span></button>
+      <button class="nav-item" data-view="kaoyan"><span>研</span> 考研英语 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="translation"><span>文</span> 翻译训练 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="vocabulary"><span>✧</span> AI 生成词表 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="study"><span>▣</span> 背单词 <span class="nav-arrow">↗</span></button>
@@ -23,13 +24,13 @@
       <button class="nav-item" data-view="profile"><span>◔</span> 个人数据 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="settings"><span>⚙</span> 设置 <span class="nav-arrow">↗</span></button>
       <div class="side-tip"><div class="tip-icon">✦</div><strong>从记住到会用</strong><p>短文阅读、考试练习与翻译训练，都可以用你的目标词。</p></div>
-      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.1.0</span></div>
+      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.2.1</span></div>
     </aside>
 
     <main class="workspace">
       <header class="topbar"><div class="breadcrumbs">工作台 <span>/</span> <strong id="breadcrumb-current">总览</strong></div><div class="top-actions"><span id="api-chip" class="api-chip" title="当前 AI 接口">● 未配置接口</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换深色模式">☾ 深色模式</button><button class="theme-toggle top-settings" type="button" data-view="settings" aria-label="打开设置">⚙ 设置</button></div></header>
       <div class="content">
-        <div class="mobile-nav" aria-label="练习模式"><button class="mode-button active" data-view="home">总览</button><button class="mode-button" data-view="study">背单词</button><button class="mode-button" data-view="story">阅读短文</button><button class="mode-button" data-view="exam">等级考试阅读</button><button class="mode-button" data-view="translation">翻译训练</button><button class="mode-button" data-view="vocabulary">AI 词表</button><button class="mode-button" data-view="profile">个人数据</button><button class="mode-button" data-view="settings">设置</button><button id="resources-toggle" class="mode-button resource-toggle" aria-expanded="false">我的词表</button></div>
+        <div class="mobile-nav" aria-label="练习模式"><button class="mode-button active" data-view="home">总览</button><button class="mode-button" data-view="study">背单词</button><button class="mode-button" data-view="story">阅读短文</button><button class="mode-button" data-view="exam">等级考试阅读</button><button class="mode-button" data-view="kaoyan">考研英语</button><button class="mode-button" data-view="translation">翻译训练</button><button class="mode-button" data-view="vocabulary">AI 词表</button><button class="mode-button" data-view="profile">个人数据</button><button class="mode-button" data-view="settings">设置</button><button id="resources-toggle" class="mode-button resource-toggle" aria-expanded="false">我的词表</button></div>
         <div class="intro"><div><span id="intro-eyebrow" class="eyebrow">YOUR ENGLISH PRACTICE STUDIO</span><h1 id="intro-title">从认识一个词，<br><em>走向真正会用。</em></h1><p id="intro-description">从词汇积累到阅读、考试与翻译，串起你的英语学习。</p></div><div class="intro-ornament" aria-hidden="true"><span>ab</span><span>→</span><span>📖</span></div></div>
 
         <div class="columns">
@@ -58,6 +59,7 @@
                 <div class="mode-cards">
                   <button class="mode-tile tile-story" data-view="story"><span class="tile-icon">▦</span><strong>阅读短文</strong><small>让目标单词在语境里出现</small><span class="tile-arrow">开始练习 →</span></button>
                   <button class="mode-tile tile-exam" data-view="exam"><span class="tile-icon">▤</span><strong>等级考试阅读</strong><small>文章、选择题、评分与解析</small><span class="tile-arrow">开始练习 →</span></button>
+                  <button class="mode-tile tile-kaoyan" data-view="kaoyan"><span class="tile-icon">研</span><strong>考研英语</strong><small>英语一/二阅读、翻译与词汇计划</small><span class="tile-arrow">进入专区 →</span></button>
                   <button class="mode-tile tile-translation" data-view="translation"><span class="tile-icon">文</span><strong>翻译训练</strong><small>先自己表达，再对照参考</small><span class="tile-arrow">开始练习 →</span></button>
                   <button class="mode-tile tile-vocabulary" data-view="vocabulary"><span class="tile-icon">✧</span><strong>AI 生成词表</strong><small>按等级和主题生成可练习的单词</small><span class="tile-arrow">开始生成 →</span></button>
                   <button class="mode-tile tile-study" data-view="study"><span class="tile-icon">▣</span><strong>背单词</strong><small>导入公开词书，按复习计划记忆</small><span class="tile-arrow">开始背词 →</span></button>
@@ -89,7 +91,7 @@
             <div id="view-exam" class="mode-view hidden">
               <section class="card settings-card">
                 <div class="card-head"><span class="step">03</span><div><h2>等级考试阅读</h2><p>原创模拟题 · 文章 + 5 道选择题</p></div></div>
-                <div class="field-grid"><label>考试类型<select id="exam-type"><option>高考</option><option selected>英语四级</option><option>英语六级</option><option>考研英语</option><option>雅思</option></select></label><label>主题 <span>可选</span><input id="exam-topic" placeholder="例如：科技与社会"></label></div>
+                <div class="field-grid"><label>考试类型<select id="exam-type"><option>高考</option><option selected>英语四级</option><option>英语六级</option><option>考研英语一</option><option>考研英语二</option><option>雅思</option></select></label><label>主题 <span>可选</span><input id="exam-topic" placeholder="例如：科技与社会"></label></div>
                 <p class="exercise-hint">可直接生成；如果已选择目标词，出题时会尽量自然融入。</p>
                 <div class="generate-row"><button id="generate-exam" class="button button-primary">✦ 生成阅读试题 <span>→</span></button><span id="exam-message" class="message" role="status"></span></div>
               </section>
@@ -105,10 +107,22 @@
               </section>
             </div>
 
+            <div id="view-kaoyan" class="mode-view hidden">
+              <section class="card kaoyan-hero">
+                <span class="eyebrow">POSTGRADUATE ENGLISH</span><h2>考研英语专项练习</h2><p>选择英语一或英语二，用原创模拟材料练阅读、翻译和词汇。练习题并非官方真题。</p>
+                <label class="field">目标科目<select id="kaoyan-track"><option value="考研英语一">考研英语一</option><option value="考研英语二">考研英语二</option></select></label>
+              </section>
+              <div class="kaoyan-actions">
+                <section class="card"><span class="eyebrow">READING</span><h3>阅读理解</h3><p>生成文章和 5 道选择题，完成后查看评分与解析。</p><button id="kaoyan-reading" class="button button-primary" type="button">开始阅读练习 →</button></section>
+                <section class="card"><span class="eyebrow">TRANSLATION</span><h3>翻译训练</h3><p>用考研难度句子练英译汉，对照参考表达。</p><button id="kaoyan-translation" class="button button-subtle" type="button">开始翻译训练 →</button></section>
+                <section class="card"><span class="eyebrow">VOCABULARY</span><h3>考研词汇计划</h3><p>打开内置考研词书，按每日计划背词和复习。</p><button id="kaoyan-study" class="button button-subtle" type="button">打开考研词书 →</button></section>
+              </div>
+            </div>
+
             <div id="view-translation" class="mode-view hidden">
               <section class="card settings-card">
                 <div class="card-head"><span class="step">03</span><div><h2>翻译训练</h2><p>5 道渐进式题目，写完后对照参考译文</p></div></div>
-                <div class="field-grid"><label>翻译方向<select id="translation-direction"><option value="zh-en">汉译英</option><option value="en-zh">英译汉</option></select></label><label>英语水平<select id="translation-level"><option value="A2">A2 · 基础</option><option value="B1" selected>B1 · 中级</option><option value="B2">B2 · 进阶</option><option value="C1">C1 · 高级</option></select></label></div>
+                <div class="field-grid"><label>翻译方向<select id="translation-direction"><option value="zh-en">汉译英</option><option value="en-zh">英译汉</option></select></label><label>英语水平<select id="translation-level"><option value="A2">A2 · 基础</option><option value="B1" selected>B1 · 中级</option><option value="B2">B2 · 进阶</option><option value="C1">C1 · 高级</option><option value="考研英语">考研英语</option></select></label></div>
                 <label class="field">主题 <span>可选</span><input id="translation-topic" placeholder="例如：校园生活"></label>
                 <p class="exercise-hint">可不导入词表直接练习；已选单词会作为出题参考。</p>
                 <div class="generate-row"><button id="generate-translation" class="button button-primary">✦ 生成翻译题 <span>→</span></button><span id="translation-message" class="message" role="status"></span></div>
@@ -212,8 +226,16 @@
                   <label class="field">模型名称<input id="model" spellcheck="false" list="model-options" placeholder="检测后选择或手动输入"><datalist id="model-options"></datalist></label>
                   <label class="field">API Key <span>可选</span><input id="api-key" type="password" autocomplete="off" placeholder="无需密钥可留空"></label>
                 </div>
-                <div class="connection-row"><button id="start-workbuddy" class="button button-subtle" type="button">启动本机 Buddy</button><button id="detect-workbuddy" class="button button-subtle" type="button">检测 Buddy 与模型</button><button id="test-api" class="button button-primary" type="button">测试连接</button><span id="buddy-status" class="message" role="status">可一键读取本机代理模型</span></div>
+                <div class="connection-row"><button id="start-workbuddy" class="button button-subtle" type="button">启动 Buddy 后台代理</button><button id="detect-workbuddy" class="button button-subtle" type="button">检测 Buddy 与模型</button><button id="test-api" class="button button-primary" type="button">测试连接</button><span id="buddy-status" class="message" role="status">使用 Buddy 时会自动启动后台代理</span></div>
                 <p class="privacy-note">URL 与模型会保存在本机；API Key 只保留在本次运行的内存中，不写入磁盘。Buddy Desktop 本机代理通常无需填写 Key。</p>
+              </section>
+
+              <section class="card buddy-card">
+                <div class="card-head"><span class="step">B</span><div><h2>Buddy 本机代理</h2><p>在词页内查看代理状态、选择模型和管理 Buddy 账号</p></div><span id="buddy-card-state" class="api-state">未检测</span></div>
+                <div id="buddy-model-list" class="buddy-model-list"><span>正在读取本机模型…</span></div>
+                <div class="connection-row"><button id="buddy-open-panel" class="button button-primary" type="button" aria-expanded="false">展开 Buddy 管理面板</button><button id="buddy-refresh-panel" class="button button-subtle" type="button">刷新面板</button></div>
+                <p class="privacy-note">管理面板来自本机 Buddy 代理。账号登录及凭据仍由 Buddy 自己处理，词页只读取其公开的本机模型接口。</p>
+                <div id="buddy-panel" class="buddy-panel hidden"><iframe id="buddy-panel-frame" title="Buddy 本机管理面板" referrerpolicy="no-referrer"></iframe></div>
               </section>
 
               <section class="card">
