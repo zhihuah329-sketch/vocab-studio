@@ -147,16 +147,16 @@
                   <div class="study-meter study-plan-meter"><span id="study-plan-meter-fill"></span></div>
                   <p id="study-plan-note">设置每天要学的新词量，再开始背词。</p>
                 </div>
-                <div class="result-actions study-actions"><button id="start-study" class="button button-primary">开始今日任务</button><button id="study-from-current" class="button button-subtle">把当前选中词加入我的词表</button></div>
+                <div class="result-actions study-actions"><button id="start-study" class="button button-primary">开始今日任务</button><button id="start-spelling" class="button button-subtle">开始拼写练习</button><button id="study-from-current" class="button button-subtle">把当前选中词加入我的词表</button></div>
                 <p id="study-message" class="message" role="status"></p>
                 <p class="book-credit">内置词书来自 <a href="https://github.com/skywind3000/ECDICT" target="_blank" rel="noopener noreferrer">ECDICT</a>（MIT 许可）；按原数据的考试标签整理，非官方指定词书。</p>
               </section>
               <section id="study-session" class="card study-session hidden">
                 <div class="study-session-top"><span id="study-position">1 / 20</span><span id="study-phase">先回忆，再翻面</span></div>
                 <div class="study-meter"><span id="study-meter-fill"></span></div>
-                <div class="flashcard"><span class="flashcard-label">TODAY'S WORD</span><h2 id="study-word"></h2><p id="study-phonetic"></p><div id="study-answer" class="study-answer hidden"><strong id="study-meaning"></strong><span id="study-answer-note"></span></div></div>
+                <div class="flashcard"><span class="flashcard-label">TODAY'S WORD</span><h2 id="study-word"></h2><p id="study-phonetic"></p><button id="study-audio" class="button button-subtle" type="button">▶ 真人发音</button><p id="study-example" class="study-example"></p><div id="study-spelling" class="study-spelling hidden"><label for="study-spelling-input">听发音，看释义，拼写单词</label><input id="study-spelling-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入完整英文单词"><button id="check-spelling" class="button button-primary" type="button">检查拼写</button><span id="study-spelling-result" role="status"></span></div><div id="study-answer" class="study-answer hidden"><strong id="study-meaning"></strong><span id="study-answer-note"></span></div></div>
                 <div class="study-controls"><button id="reveal-study" class="button button-primary">显示释义</button><button id="again-study" class="button button-subtle hidden">再复习</button><button id="remember-study" class="button button-primary hidden">记住了</button></div>
-                <p class="exercise-hint">空格显示释义；显示后按 1 再复习、按 2 记住了。</p>
+                <p class="exercise-hint">普通模式：空格显示释义；显示后按 1 再复习、按 2 记住了。拼写模式：输入单词后按 Enter 检查。</p>
               </section>
             </div>
 
@@ -212,7 +212,7 @@
                   <label class="field">模型名称<input id="model" spellcheck="false" list="model-options" placeholder="检测后选择或手动输入"><datalist id="model-options"></datalist></label>
                   <label class="field">API Key <span>可选</span><input id="api-key" type="password" autocomplete="off" placeholder="无需密钥可留空"></label>
                 </div>
-                <div class="connection-row"><button id="detect-workbuddy" class="button button-subtle" type="button">检测 Buddy 与模型</button><button id="test-api" class="button button-primary" type="button">测试连接</button><span id="buddy-status" class="message" role="status">可一键读取本机代理模型</span></div>
+                <div class="connection-row"><button id="start-workbuddy" class="button button-subtle" type="button">启动本机 Buddy</button><button id="detect-workbuddy" class="button button-subtle" type="button">检测 Buddy 与模型</button><button id="test-api" class="button button-primary" type="button">测试连接</button><span id="buddy-status" class="message" role="status">可一键读取本机代理模型</span></div>
                 <p class="privacy-note">URL 与模型会保存在本机；API Key 只保留在本次运行的内存中，不写入磁盘。Buddy Desktop 本机代理通常无需填写 Key。</p>
               </section>
 
@@ -221,6 +221,9 @@
                 <div class="theme-options" role="radiogroup" aria-label="主题">
                   <button class="theme-option" data-theme-choice="light" role="radio" aria-checked="true"><span class="theme-swatch swatch-light"></span><strong>浅色</strong><small>明亮清爽，适合白天</small></button>
                   <button class="theme-option" data-theme-choice="dark" role="radio" aria-checked="false"><span class="theme-swatch swatch-dark"></span><strong>深色</strong><small>低亮度，适合夜间</small></button>
+                  <button class="theme-option" data-theme-choice="ocean" role="radio" aria-checked="false"><span class="theme-swatch swatch-ocean"></span><strong>海蓝</strong><small>清透蓝色，专注阅读</small></button>
+                  <button class="theme-option" data-theme-choice="lavender" role="radio" aria-checked="false"><span class="theme-swatch swatch-lavender"></span><strong>淡紫</strong><small>柔和紫色，轻松练习</small></button>
+                  <button class="theme-option" data-theme-choice="sepia" role="radio" aria-checked="false"><span class="theme-swatch swatch-sepia"></span><strong>暖纸</strong><small>低对比度，温暖护眼</small></button>
                 </div>
               </section>
 

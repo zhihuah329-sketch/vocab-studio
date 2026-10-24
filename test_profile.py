@@ -52,6 +52,13 @@ class ProfileDataTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 save_settings(path, {"api_url": "http://127.0.0.1:5178/v1/chat/completions", "model": "m", "theme": "dark", "nickname": "n" * 31})
 
+    def test_color_palettes_persist(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.json"
+            for theme in ("ocean", "lavender", "sepia"):
+                save_settings(path, {"api_url": "http://127.0.0.1:5178/v1/chat/completions", "model": "m", "theme": theme})
+                self.assertEqual(read_settings(path)["theme"], theme)
+
 
 if __name__ == "__main__":
     unittest.main()

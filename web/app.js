@@ -20,6 +20,11 @@ let selectionTimer;
 let selectionRequest = 0;
 const studyRepeats = new Set();
 const studyOrigins = new Map();
+let studyMode = 'review';
+let studySaveQueue = Promise.resolve();
+const dictionaryCache = new Map();
+let studyAudio = null;
+let buddyAutoStartAttempted = false;
 
 let saveTimer;
 function applyTheme(theme) {
@@ -195,7 +200,19 @@ async function detectWorkbuddy(select) {
   try {
     const response = await fetch('/api/workbuddy', { headers: { 'X-App-Token': token } });
     const result = await response.json();
-    if (!result.available) { setApiState('未连接', 'error'); return message('buddy-status', result.message, true); }
+    if (!result.available) {
+      setApiState('未连接', 'error');
+      message('buddy-status', result.message, true);
+      if (!select && !buddyAutoStartAttempted && $('api-url').value.includes('127.0.0.1:5178')) {
+        buddyAutoStartAttempted = true;
+        try {
+          const started = await post('/api/workbuddy/start', '{}', { 'Content-Type': 'application/json' });
+          message('buddy-status', started.message || '正在连接 Buddy…');
+          if (started.starting) setTimeout(() => detectWorkbuddy(true), 5000);
+        } catch (error) { message('buddy-status', error.message, true); }
+      }
+      return;
+    }
     const options = $('model-options');
     options.replaceChildren();
     for (const name of result.models) {
@@ -214,6 +231,14 @@ async function detectWorkbuddy(select) {
   } catch (error) { setApiState('检测失败', 'error'); message('buddy-status', `检测失败：${error.message}`, true); }
 }
 $('detect-workbuddy').addEventListener('click', () => detectWorkbuddy(true));
+$('start-workbuddy').addEventListener('click', async () => {
+  message('buddy-status', '正在启动 Buddy…');
+  try {
+    const result = await post('/api/workbuddy/start', '{}', { 'Content-Type': 'application/json' });
+    message('buddy-status', result.message || 'Buddy 已运行，正在读取模型…');
+    setTimeout(() => detectWorkbuddy(true), result.starting ? 4000 : 0);
+  } catch (error) { message('buddy-status', error.message, true); }
+});
 $('test-api').addEventListener('click', async () => {
   let request;
   try { request = sharedRequest(); } catch (error) { return message('buddy-status', error.message, true); }
@@ -497,7 +522,9 @@ function todayISO(offset = 0) {
 }
 
 async function saveStudyState() {
-  studyState = await post('/api/study', JSON.stringify(studyState), { 'Content-Type': 'application/json' });
+  const snapshot = JSON.stringify(studyState);
+  studySaveQueue = studySaveQueue.catch(() => {}).then(() => post('/api/study', snapshot, { 'Content-Type': 'application/json' }));
+  await studySaveQueue;
 }
 
 async function loadStudyData() {
@@ -608,7 +635,7 @@ $('study-from-current').addEventListener('click', async () => {
   } catch (error) { message('study-message', error.message, true); }
 });
 
-$('start-study').addEventListener('click', () => {
+function startStudy(mode = 'review') {
   if (!studyItems.length) return message('study-message', '请先选择有单词的词书。', true);
   const plan = currentStudyPlan();
   const done = currentDailyStudy();
@@ -631,10 +658,62 @@ $('start-study').addEventListener('click', () => {
   for (const item of due) studyOrigins.set(studyKey(item), 'review');
   for (const item of todayNew) studyOrigins.set(studyKey(item), 'new');
   studyIndex = 0;
+  studyMode = mode;
   $('study-session').classList.remove('hidden');
   renderStudyCard();
   $('study-session').scrollIntoView({ behavior: 'smooth', block: 'start' });
-});
+}
+$('start-study').addEventListener('click', () => startStudy('review'));
+$('start-spelling').addEventListener('click', () => startStudy('spelling'));
+
+async function enrichStudyCard(item) {
+  const word = item.word;
+  try {
+    if (!dictionaryCache.has(word)) dictionaryCache.set(word, getJSON(`/api/dictionary?word=${encodeURIComponent(word)}`));
+    const detail = await dictionaryCache.get(word);
+    if (studyCurrent !== item) return;
+    if (detail.phonetic) $('study-phonetic').textContent = detail.phonetic;
+    $('study-example').textContent = detail.example ? `例句：${detail.example}` : '暂无词典例句';
+    item.audio = detail.audio;
+    if (!detail.audio) $('study-audio').textContent = '▶ 系统朗读';
+  } catch { if (studyCurrent === item) $('study-example').textContent = '词典暂不可用'; }
+}
+function speakStudyWord() {
+  if (!studyCurrent) return;
+  if (studyAudio) { studyAudio.pause(); studyAudio = null; }
+  if (studyCurrent.audio) {
+    studyAudio = new Audio(studyCurrent.audio);
+    studyAudio.play().catch(() => fallbackSpeech());
+  } else fallbackSpeech();
+}
+function fallbackSpeech() {
+  if (!('speechSynthesis' in window)) return message('study-message', '当前系统没有可用朗读功能。', true);
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(studyCurrent.word);
+  utterance.lang = 'en-US';
+  utterance.rate = .85;
+  speechSynthesis.speak(utterance);
+}
+$('study-audio').addEventListener('click', speakStudyWord);
+function checkSpelling() {
+  if (!studyCurrent || studyMode !== 'spelling') return;
+  const input = $('study-spelling-input').value.trim().toLowerCase();
+  if (!input) return message('study-message', '先输入单词，再检查拼写。', true);
+  const correct = input === studyCurrent.word.toLowerCase();
+  $('study-spelling-result').textContent = correct ? '拼写正确！' : `拼写有误，正确答案：${studyCurrent.word}`;
+  $('study-spelling-result').classList.toggle('error', !correct);
+  $('study-word').textContent = studyCurrent.word;
+  $('study-word').classList.remove('hidden');
+  $('study-answer').classList.remove('hidden');
+  $('study-meaning').textContent = studyCurrent.meaning || '';
+  $('study-phase').textContent = correct ? '拼写正确，进入下一个' : '再看一遍，稍后重练';
+  $('check-spelling').disabled = true;
+  $('again-study').classList.toggle('hidden', correct);
+  $('remember-study').classList.toggle('hidden', !correct);
+  $('reveal-study').classList.add('hidden');
+}
+$('check-spelling').addEventListener('click', checkSpelling);
+$('study-spelling-input').addEventListener('keydown', event => { if (event.key === 'Enter') checkSpelling(); });
 
 function renderStudyCard() {
   studyCurrent = studyQueue[studyIndex];
@@ -648,11 +727,24 @@ function renderStudyCard() {
   $('study-phase').textContent = '先回忆，再翻面';
   $('study-meter-fill').style.width = `${Math.round(studyIndex / studyQueue.length * 100)}%`;
   $('study-word').textContent = studyCurrent.word;
-  $('study-phonetic').textContent = studyCurrent.phonetic ? `/${studyCurrent.phonetic}/` : '';
+  $('study-word').classList.toggle('hidden', studyMode === 'spelling');
+  $('study-phonetic').textContent = studyCurrent.phonetic ? `/${studyCurrent.phonetic.replace(/^\/+|\/+$/g, '')}/` : '正在查询音标…';
+  $('study-example').textContent = '正在查询词典例句…';
+  $('study-audio').textContent = '▶ 真人发音';
+  $('study-spelling').classList.toggle('hidden', studyMode !== 'spelling');
+  $('study-spelling-input').value = '';
+  $('study-spelling-result').textContent = '';
+  $('check-spelling').disabled = false;
+  $('reveal-study').classList.toggle('hidden', studyMode === 'spelling');
+  if (studyMode === 'spelling') {
+    $('study-phase').textContent = '听发音，按释义拼写';
+    $('study-spelling-input').focus();
+  }
+  enrichStudyCard(studyCurrent);
   $('study-meaning').textContent = '';
   $('study-answer-note').textContent = '';
   $('study-answer').classList.add('hidden');
-  $('reveal-study').classList.remove('hidden');
+  $('reveal-study').classList.toggle('hidden', studyMode === 'spelling');
   $('again-study').classList.add('hidden');
   $('remember-study').classList.add('hidden');
 }
@@ -697,9 +789,8 @@ async function rateStudy(remembered) {
     const list = studyState.daily[date][$('study-book').value][studyOrigins.get(key) || 'review'];
     if (!list.includes(studyCurrent.word)) list.push(studyCurrent.word);
   }
-  if (!remembered && !studyRepeats.has(key)) {
+  if (!remembered) {
     studyQueue.push(studyCurrent);
-    studyRepeats.add(key);
   }
   $('again-study').disabled = true;
   $('remember-study').disabled = true;

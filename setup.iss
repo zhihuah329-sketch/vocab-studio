@@ -1,5 +1,5 @@
 #define AppName "词页英语练习工作台"
-#define AppVersion "4.1.0"
+#define AppVersion "4.2.0"
 #define AppExe AppName + ".exe"
 
 [Setup]
@@ -17,7 +17,7 @@ WizardStyle=modern
 UninstallDisplayIcon={app}\{#AppExe}
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=4.1.0.0
+VersionInfoVersion=4.2.0.0
 
 [Languages]
 Name: "chinesesimp"; MessagesFile: "installer\ChineseSimplified.isl"

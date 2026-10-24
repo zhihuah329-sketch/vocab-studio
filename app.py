@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import re
+import subprocess
 import sys
 import threading
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import webview
 
@@ -48,6 +50,44 @@ def workbuddy_status() -> dict:
         return {"available": False, "api_url": base + "/v1/chat/completions", "models": [], "message": f"无法识别 Buddy Desktop 本机接口（{port} 端口）：{exc}"}
 
 
+def start_workbuddy() -> dict:
+    status = workbuddy_status()
+    if status["available"]:
+        return status
+    executable = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "BuddyDesktop" / "electron.exe"
+    if not executable.is_file():
+        raise ValueError("未找到已安装的 Buddy Desktop。请先安装并登录一次。")
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    startup = subprocess.STARTUPINFO() if os.name == "nt" else None
+    if startup:
+        startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startup.wShowWindow = 0
+    subprocess.Popen([str(executable)], cwd=str(executable.parent), creationflags=flags, startupinfo=startup, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {"starting": True, "message": "已尝试启动 Buddy Desktop，请稍等后重新检测。首次登录可能仍需打开 Buddy 窗口。"}
+
+
+def dictionary_entry(word: str) -> dict:
+    if not re.fullmatch(r"[A-Za-z][A-Za-z' -]{0,79}", word):
+        raise ValueError("单词格式无效。")
+    url = "https://api.dictionaryapi.dev/api/v2/entries/en/" + quote(word)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "VocabStudio/4.2"}), timeout=8) as response:
+            entries = json.load(response)
+    except (OSError, ValueError, urllib.error.HTTPError):
+        return {"phonetic": "", "example": "", "audio": ""}
+    if not isinstance(entries, list) or not entries:
+        return {"phonetic": "", "example": "", "audio": ""}
+    entry = entries[0]
+    phonetics = entry.get("phonetics") or []
+    audio = next((item.get("audio", "") for item in phonetics if isinstance(item, dict) and item.get("audio")), "")
+    if audio.startswith("//"):
+        audio = "https:" + audio
+    if not audio.startswith("https://"):
+        audio = ""
+    example = next((definition.get("example", "") for meaning in entry.get("meanings", []) for definition in meaning.get("definitions", []) if isinstance(definition, dict) and definition.get("example")), "")
+    return {"phonetic": str(entry.get("phonetic") or next((item.get("text", "") for item in phonetics if isinstance(item, dict) and item.get("text")), ""))[:80], "example": str(example)[:300], "audio": audio}
+
+
 def make_handler(token: str, settings_path: Path | None = None, study_path: Path | None = None, books_path: Path | None = None):
     preferences = settings_path or default_path()
     study_file = study_path or default_study_path()
@@ -59,7 +99,7 @@ def make_handler(token: str, settings_path: Path | None = None, study_path: Path
         def do_GET(self):
             parsed = urlparse(self.path)
             route = parsed.path
-            if route in {"/api/settings", "/api/workbuddy", "/api/books", "/api/book", "/api/study"}:
+            if route in {"/api/settings", "/api/workbuddy", "/api/books", "/api/book", "/api/study", "/api/dictionary"}:
                 if self.headers.get("X-App-Token") != token:
                     self._json(403, {"error": "请求未授权。"})
                 else:
@@ -72,6 +112,8 @@ def make_handler(token: str, settings_path: Path | None = None, study_path: Path
                             result = list_books(books_file)
                         elif route == "/api/book":
                             result = get_book(books_file, parse_qs(parsed.query).get("id", [""])[0])
+                        elif route == "/api/dictionary":
+                            result = dictionary_entry(parse_qs(parsed.query).get("word", [""])[0])
                         else:
                             result = read_study(study_file)
                         self._json(200, result)
@@ -131,6 +173,8 @@ def make_handler(token: str, settings_path: Path | None = None, study_path: Path
                     self._json(200, save_settings(preferences, json.loads(body)))
                 elif self.path == "/api/study":
                     self._json(200, save_study(study_file, json.loads(body)))
+                elif self.path == "/api/workbuddy/start":
+                    self._json(200, start_workbuddy())
                 elif self.path == "/api/vocabulary":
                     data = json.loads(body)
                     result = generate_vocabulary(

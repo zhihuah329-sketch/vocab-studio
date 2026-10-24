@@ -44,7 +44,7 @@ def save_settings(path: Path, data: dict) -> dict:
     if len(api_url) > 2048 or len(model) > 200:
         raise ValueError("接口配置过长。")
     theme = data.get("theme")
-    if theme not in {"light", "dark"}:
+    if theme not in {"light", "dark", "ocean", "lavender", "sepia"}:
         raise ValueError("主题设置无效。")
     nickname = str(data.get("nickname") or "").strip()
     if len(nickname) > 30:
