@@ -18,19 +18,20 @@
       <button class="nav-item" data-view="exam"><span>▤</span> 等级考试阅读 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="kaoyan"><span>研</span> 考研英语 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="translation"><span>文</span> 翻译训练 <span class="nav-arrow">↗</span></button>
+      <button class="nav-item" data-view="writing"><span>✎</span> 写作批改 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="vocabulary"><span>✧</span> AI 生成词表 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="study"><span>▣</span> 背单词 <span class="nav-arrow">↗</span></button>
       <div class="side-section side-section-gap">我的</div>
       <button class="nav-item" data-view="profile"><span>◔</span> 个人数据 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="settings"><span>⚙</span> 设置 <span class="nav-arrow">↗</span></button>
       <div class="side-tip"><div class="tip-icon">✦</div><strong>从记住到会用</strong><p>短文阅读、考试练习与翻译训练，都可以用你的目标词。</p></div>
-      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.2.2</span></div>
+      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.3.0</span></div>
     </aside>
 
     <main class="workspace">
       <header class="topbar"><div class="breadcrumbs">工作台 <span>/</span> <strong id="breadcrumb-current">总览</strong></div><div class="top-actions"><span id="api-chip" class="api-chip" title="当前 AI 接口">● 未配置接口</span><button id="theme-toggle" class="theme-toggle" type="button" aria-label="切换深色模式">☾ 深色模式</button><button class="theme-toggle top-settings" type="button" data-view="settings" aria-label="打开设置">⚙ 设置</button></div></header>
       <div class="content">
-        <div class="mobile-nav" aria-label="练习模式"><button class="mode-button active" data-view="home">总览</button><button class="mode-button" data-view="study">背单词</button><button class="mode-button" data-view="story">阅读短文</button><button class="mode-button" data-view="exam">等级考试阅读</button><button class="mode-button" data-view="kaoyan">考研英语</button><button class="mode-button" data-view="translation">翻译训练</button><button class="mode-button" data-view="vocabulary">AI 词表</button><button class="mode-button" data-view="profile">个人数据</button><button class="mode-button" data-view="settings">设置</button><button id="resources-toggle" class="mode-button resource-toggle" aria-expanded="false">我的词表</button></div>
+        <div class="mobile-nav" aria-label="练习模式"><button class="mode-button active" data-view="home">总览</button><button class="mode-button" data-view="study">背单词</button><button class="mode-button" data-view="story">阅读短文</button><button class="mode-button" data-view="exam">等级考试阅读</button><button class="mode-button" data-view="kaoyan">考研英语</button><button class="mode-button" data-view="translation">翻译训练</button><button class="mode-button" data-view="writing">写作批改</button><button class="mode-button" data-view="vocabulary">AI 词表</button><button class="mode-button" data-view="profile">个人数据</button><button class="mode-button" data-view="settings">设置</button><button id="resources-toggle" class="mode-button resource-toggle" aria-expanded="false">我的词表</button></div>
         <div class="intro"><div><span id="intro-eyebrow" class="eyebrow">YOUR ENGLISH PRACTICE STUDIO</span><h1 id="intro-title">从认识一个词，<br><em>走向真正会用。</em></h1><p id="intro-description">从词汇积累到阅读、考试与翻译，串起你的英语学习。</p></div><div class="intro-ornament" aria-hidden="true"><span>ab</span><span>→</span><span>📖</span></div></div>
 
         <div class="columns">
@@ -61,13 +62,14 @@
                   <button class="mode-tile tile-exam" data-view="exam"><span class="tile-icon">▤</span><strong>等级考试阅读</strong><small>文章、选择题、评分与解析</small><span class="tile-arrow">开始练习 →</span></button>
                   <button class="mode-tile tile-kaoyan" data-view="kaoyan"><span class="tile-icon">研</span><strong>考研英语</strong><small>英语一/二阅读、翻译与词汇计划</small><span class="tile-arrow">进入专区 →</span></button>
                   <button class="mode-tile tile-translation" data-view="translation"><span class="tile-icon">文</span><strong>翻译训练</strong><small>先自己表达，再对照参考</small><span class="tile-arrow">开始练习 →</span></button>
+                  <button class="mode-tile tile-writing" data-view="writing"><span class="tile-icon">✎</span><strong>写作批改</strong><small>按考试难度出题、评分和逐项修改</small><span class="tile-arrow">开始写作 →</span></button>
                   <button class="mode-tile tile-vocabulary" data-view="vocabulary"><span class="tile-icon">✧</span><strong>AI 生成词表</strong><small>按等级和主题生成可练习的单词</small><span class="tile-arrow">开始生成 →</span></button>
                   <button class="mode-tile tile-study" data-view="study"><span class="tile-icon">▣</span><strong>背单词</strong><small>导入公开词书，按复习计划记忆</small><span class="tile-arrow">开始背词 →</span></button>
                 </div>
               </section>
               <section class="card progress-card">
                 <div class="card-head"><span class="step">↗</span><div><h2>学习记录</h2><p>累计数据，保存在本机</p></div><button class="link-button card-link" data-view="profile">查看个人数据 →</button></div>
-                <div class="progress-grid"><div><strong id="stat-words">0</strong><span>已选单词</span></div><div><strong id="stat-studies">0</strong><span>今日背词</span></div><div><strong id="stat-stories">0</strong><span>生成短文</span></div><div><strong id="stat-exams">0</strong><span>阅读练习</span></div><div><strong id="stat-translations">0</strong><span>翻译练习</span></div><div><strong id="stat-vocabularies">0</strong><span>生成词表</span></div></div>
+                <div class="progress-grid"><div><strong id="stat-words">0</strong><span>已选单词</span></div><div><strong id="stat-studies">0</strong><span>今日背词</span></div><div><strong id="stat-stories">0</strong><span>生成短文</span></div><div><strong id="stat-exams">0</strong><span>阅读练习</span></div><div><strong id="stat-translations">0</strong><span>翻译练习</span></div><div><strong id="stat-writings">0</strong><span>写作批改</span></div><div><strong id="stat-vocabularies">0</strong><span>生成词表</span></div></div>
                 <div id="activity-list" class="activity-list"><div class="empty-activity">完成一次练习后，记录会显示在这里。</div></div>
               </section>
             </div>
@@ -132,6 +134,34 @@
                 <div id="translation-items"></div>
                 <div class="result-actions"><button id="show-references" class="button button-primary">对照参考答案</button><button id="download-translation" class="button button-subtle">↓ 导出练习</button></div>
                 <p id="translation-feedback" class="exercise-hint"></p>
+              </section>
+            </div>
+
+            <div id="view-writing" class="mode-view hidden">
+              <section class="card settings-card writing-brief">
+                <div class="card-head"><span class="step">✎</span><div><h2>写作练习</h2><p>按考试难度出题，写完后让 AI 评分批改</p></div></div>
+                <div class="field-grid"><label>考试类型<select id="writing-level"><option>高考</option><option selected>英语四级</option><option>英语六级</option><option>考研英语一</option><option>考研英语二</option><option>雅思</option></select></label><label>主题 <span>可选</span><input id="writing-topic" placeholder="例如：科技与社会"></label></div>
+                <div class="generate-row"><button id="generate-writing" class="button button-primary" type="button">✦ 生成写作题目 <span>→</span></button><span id="writing-message" class="message" role="status"></span></div>
+                <div class="writing-brief-divider"></div>
+                <span class="eyebrow">YOUR ASSIGNMENT</span><h3 id="writing-title">写作题目</h3>
+                <p id="writing-prompt" class="writing-task">生成题目，或在下面粘贴老师布置的题目。</p>
+                <label class="field">写作要求<textarea id="writing-task" rows="5" maxlength="3000" placeholder="生成后可以修改，也可以直接粘贴自己的题目"></textarea></label>
+                <p class="exercise-hint">评分为 AI 模拟评分，仅供练习参考。</p>
+              </section>
+              <section class="card writing-editor">
+                <div class="result-heading"><div><span class="eyebrow">WRITING DESK</span><h2>写下你的英文作文</h2></div><span id="writing-range" class="coverage">英语四级 · 120–180 词</span></div>
+                <label class="field">你的作文<textarea id="writing-essay" rows="15" maxlength="12000" lang="en" spellcheck="true" placeholder="Write your essay here..."></textarea></label>
+                <div class="writing-footer"><span id="writing-count">0 词</span><span>至少 20 词才能提交批改</span></div>
+                <div class="generate-row"><button id="grade-writing" class="button button-primary" type="button">提交评分与批改</button><span id="grade-message" class="message" role="status"></span></div>
+              </section>
+              <section id="writing-result" class="card result-card hidden" aria-live="polite">
+                <div class="result-heading"><div><span class="eyebrow">WRITING FEEDBACK</span><h2>作文评分与批改</h2></div><strong id="writing-score" class="writing-score">—</strong></div>
+                <p id="writing-summary" class="writing-summary"></p>
+                <div id="writing-criteria" class="writing-criteria"></div>
+                <div class="section-split"><strong>写得好的地方</strong></div><ul id="writing-strengths" class="writing-list"></ul>
+                <div class="section-split"><strong>逐项批改</strong></div><div id="writing-issues" class="writing-issues"></div>
+                <div class="section-split"><strong>参考修改稿</strong></div><p id="writing-revision" class="reading writing-revision"></p>
+                <div class="result-actions"><button id="download-writing" class="button button-subtle" type="button">↓ 导出批改</button></div>
               </section>
             </div>
 
@@ -218,7 +248,7 @@
 
             <div id="view-settings" class="mode-view hidden">
               <section class="card api-card">
-                <div class="card-head"><span class="step">⚙</span><div><h2>AI 接口</h2><p>阅读、考试、翻译、词表与划词翻译共用这组配置</p></div><span id="api-state" class="api-state">未检测</span></div>
+                <div class="card-head"><span class="step">⚙</span><div><h2>AI 接口</h2><p>阅读、考试、翻译、写作、词表与划词翻译共用这组配置</p></div><span id="api-state" class="api-state">未检测</span></div>
                 <div class="settings-label">快速选择</div>
                 <div class="preset-row"><button class="preset active" data-workbuddy="true" data-url="http://127.0.0.1:5178/v1/chat/completions">Buddy Desktop</button><button class="preset" data-url="http://127.0.0.1:11434/v1/chat/completions" data-model="llama3.2">Ollama 本地</button><button class="preset" data-url="https://api.openai.com/v1/chat/completions" data-model="gpt-4.1-mini">OpenAI</button><button class="preset" data-custom="true">自定义</button></div>
                 <div class="settings-fields">

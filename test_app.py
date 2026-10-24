@@ -30,6 +30,14 @@ class FakeProvider(BaseHTTPRequestHandler):
             content = {"title": "Translation", "items": [{"source": f"句子 {i}", "reference": f"Sentence {i}", "note": "注意句型。"} for i in range(5)]}
         elif "vocabulary list" in prompt:
             content = {"title": "旅行词汇", "items": [{"word": f"term{chr(97 + i)}", "meaning": "释义", "example": f"This is term {i}."} for i in range(20)]}
+        elif "writing task" in prompt:
+            content = {"title": "阅读习惯", "prompt": "谈谈阅读习惯。", "requirements": "举例说明。"}
+        elif "writing tutor" in prompt:
+            essay = json.loads(FakeProvider.received["body"]["messages"][1]["content"])["essay"]
+            content = {"score": 82, "criteria": {"content": 22, "organization": 20, "language": 21, "accuracy": 19},
+                       "summary": "观点清楚。", "strengths": ["主题明确"],
+                       "issues": [{"original": "Reading every evening", "correction": "Reading each evening", "reason": "表达自然。"}],
+                       "revised_essay": essay}
         elif "selected English word" in prompt:
             content = {"translation": "一次旅程", "note": "journey 表示旅行经历。"}
         else:
@@ -134,6 +142,11 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(len(vocabulary["items"]), 20)
             selected = post("/api/translate-selection", json.dumps({**common, "text": "a journey", "context": "A journey begins."}).encode(), {"Content-Type": "application/json"})
             self.assertEqual(selected["translation"], "一次旅程")
+            writing = post("/api/writing/prompt", json.dumps({**common, "level": "英语四级", "topic": "阅读"}).encode(), {"Content-Type": "application/json"})
+            self.assertEqual(writing["min_words"], 120)
+            essay = "I enjoy reading books because they help me learn about the world. Reading every evening also gives me new ideas for school and daily life."
+            graded = post("/api/writing/grade", json.dumps({**common, "level": "英语四级", "task": writing["prompt"], "essay": essay}).encode(), {"Content-Type": "application/json"})
+            self.assertEqual(graded["score"], 82)
         finally:
             for server in (provider, app):
                 server.shutdown()

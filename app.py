@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 import webview
 
-from core import generate_exam, generate_passage, generate_translation, generate_vocabulary, load_words_bytes, missing_words, translate_selection
+from core import generate_exam, generate_passage, generate_translation, generate_vocabulary, generate_writing_prompt, grade_writing, load_words_bytes, missing_words, translate_selection
 from settings import default_path, read_settings, save_settings
 from study import default_study_path, get_book, list_books, read_study, save_study
 
@@ -199,6 +199,22 @@ def make_handler(token: str, settings_path: Path | None = None, study_path: Path
                         str(data.get("api_url", "")), str(data.get("model", "")),
                         str(data.get("api_key", "")), str(data.get("level", "")),
                         int(data.get("count", 20)), str(data.get("topic", "")),
+                    )
+                    self._json(200, result)
+                elif self.path == "/api/writing/prompt":
+                    data = json.loads(body)
+                    result = generate_writing_prompt(
+                        str(data.get("api_url", "")), str(data.get("model", "")),
+                        str(data.get("api_key", "")), str(data.get("level", "")),
+                        str(data.get("topic", "")), data.get("words", []),
+                    )
+                    self._json(200, result)
+                elif self.path == "/api/writing/grade":
+                    data = json.loads(body)
+                    result = grade_writing(
+                        str(data.get("api_url", "")), str(data.get("model", "")),
+                        str(data.get("api_key", "")), str(data.get("level", "")),
+                        str(data.get("task", "")), str(data.get("essay", "")),
                     )
                     self._json(200, result)
                 elif self.path == "/api/translate-selection":

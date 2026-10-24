@@ -6,8 +6,10 @@ let latest = null;
 let latestExam = null;
 let latestTranslation = null;
 let latestVocabulary = null;
+let latestWriting = null;
+let generatedWritingTask = '';
 const wordDetails = new Map();
-const ACTIVITY_LABELS = { story: '阅读短文', exam: '等级考试阅读', translation: '翻译训练', vocabulary: 'AI 词表' };
+const ACTIVITY_LABELS = { story: '阅读短文', exam: '等级考试阅读', translation: '翻译训练', writing: '写作批改', vocabulary: 'AI 词表' };
 let studyState = { custom: [], progress: {}, activeBook: 'cet4', plans: {}, daily: {}, activity: [] };
 let bookMeta = [];
 let nickname = '';
@@ -356,6 +358,7 @@ const views = {
   exam: { label: '等级考试阅读', eyebrow: 'READ · THINK · ANSWER', title: '读一篇文章，<br><em>练一场考试。</em>', description: '选择考试类型，完成原创模拟阅读与五道选择题。' },
   kaoyan: { label: '考研英语', eyebrow: 'POSTGRADUATE ENGLISH', title: '为考研做准备，<br><em>从今天这一篇开始。</em>', description: '英语一/二阅读、翻译和考研词汇计划集中练习。' },
   translation: { label: '翻译训练', eyebrow: 'FROM WORDS TO EXPRESSION', title: '把理解写出来，<br><em>让表达更准确。</em>', description: '汉译英或英译汉，先独立作答，再对照参考译文。' },
+  writing: { label: '写作批改', eyebrow: 'WRITE · REVISE · IMPROVE', title: '写下你的想法，<br><em>让表达更有力量。</em>', description: '按考试类型练习写作，获得评分、评语和具体修改建议。' },
   vocabulary: { label: 'AI 生成词表', eyebrow: 'BUILD YOUR WORD BANK', title: '选一个方向，<br><em>生成下一份词表。</em>', description: '按等级和主题生成词汇、释义与例句，直接加入练习。' },
   study: { label: '背单词', eyebrow: 'A LITTLE, EVERY DAY', title: '每天记一点，<br><em>让词汇真正留下。</em>', description: '选择词书，先回忆再翻面，按记忆情况安排复习。' },
   profile: { label: '个人数据', eyebrow: 'YOUR PROGRESS', title: '看见每一天，<br><em>积累成长的轨迹。</em>', description: '背词进度、学习趋势与练习记录，全部保存在本机。' },
@@ -562,6 +565,95 @@ $('download-translation').addEventListener('click', () => {
   if (!latestTranslation) return;
   const items = latestTranslation.items.map((item, index) => `${index + 1}. ${item.source}\n\n我的译文：${$(`translation-answer-${index}`).value.trim() || '（未作答）'}\n\n参考译文：${item.reference}\n\n提示：${item.note}`).join('\n\n');
   download('翻译训练.md', `# ${latestTranslation.title}\n\n${latestTranslation.direction === 'zh-en' ? '汉译英' : '英译汉'}\n\n${items}\n`);
+});
+
+const WRITING_RANGES = { '高考': [100, 150], '英语四级': [120, 180], '英语六级': [150, 220], '考研英语一': [160, 220], '考研英语二': [160, 220], '雅思': [250, 320] };
+const WRITING_CRITERIA = { content: '内容切题', organization: '结构连贯', language: '词汇表达', accuracy: '语法拼写' };
+function countEnglishWords(value) { return (value.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []).length; }
+function updateWritingCount() {
+  const count = countEnglishWords($('writing-essay').value);
+  const [lower, upper] = WRITING_RANGES[$('writing-level').value];
+  $('writing-count').textContent = `${count} 词 · 建议 ${lower}–${upper} 词`;
+  $('writing-range').textContent = `${$('writing-level').value} · ${lower}–${upper} 词`;
+}
+function invalidateWritingFeedback() { latestWriting = null; $('writing-result').classList.add('hidden'); }
+$('writing-level').addEventListener('change', () => {
+  updateWritingCount();
+  invalidateWritingFeedback();
+  if ($('writing-task').value === generatedWritingTask && generatedWritingTask) {
+    $('writing-task').value = '';
+    $('writing-title').textContent = '写作题目';
+    $('writing-prompt').textContent = '考试类型已切换，请生成新题目或粘贴自己的题目。';
+    generatedWritingTask = '';
+  }
+});
+$('writing-task').addEventListener('input', invalidateWritingFeedback);
+$('writing-essay').addEventListener('input', () => { updateWritingCount(); invalidateWritingFeedback(); });
+updateWritingCount();
+
+$('generate-writing').addEventListener('click', async () => {
+  let request;
+  try { request = sharedRequest(); } catch (error) { return message('writing-message', error.message, true); }
+  setBusy('generate-writing', 'writing-message', true, '正在生成写作题目…');
+  try {
+    const level = $('writing-level').value;
+    const result = await post('/api/writing/prompt', JSON.stringify({ ...request, level, topic: $('writing-topic').value.trim() }), { 'Content-Type': 'application/json' });
+    $('writing-title').textContent = result.title;
+    $('writing-prompt').textContent = result.prompt;
+    generatedWritingTask = `${result.prompt}\n${result.requirements}`;
+    $('writing-task').value = generatedWritingTask;
+    invalidateWritingFeedback();
+    message('writing-message', '题目已生成，可以开始写作。');
+  } catch (error) { message('writing-message', error.message, true); }
+  finally { $('generate-writing').disabled = false; }
+});
+
+$('grade-writing').addEventListener('click', async () => {
+  let request;
+  try { request = sharedRequest(); } catch (error) { return message('grade-message', error.message, true); }
+  const essay = $('writing-essay').value.trim();
+  const task = $('writing-task').value.trim();
+  if (!task) return message('grade-message', '请先生成题目，或填写写作要求。', true);
+  if (countEnglishWords(essay) < 20) return message('grade-message', '请至少写 20 个英文单词。', true);
+  const level = $('writing-level').value;
+  setBusy('grade-writing', 'grade-message', true, '正在评分和批改，请稍候…');
+  try {
+    const result = await post('/api/writing/grade', JSON.stringify({ ...request, level, task, essay }), { 'Content-Type': 'application/json' });
+    latestWriting = { level, task, essay, ...result };
+    $('writing-score').textContent = `${result.score} / 100`;
+    $('writing-summary').textContent = result.summary;
+    const criteria = $('writing-criteria');
+    criteria.replaceChildren();
+    Object.entries(WRITING_CRITERIA).forEach(([key, label]) => {
+      const cell = make('div', 'writing-criterion');
+      cell.append(make('span', '', label), make('strong', '', `${result.criteria[key]} / 25`));
+      criteria.append(cell);
+    });
+    const strengths = $('writing-strengths');
+    strengths.replaceChildren(...result.strengths.map(item => make('li', '', item)));
+    const issues = $('writing-issues');
+    issues.replaceChildren();
+    if (!result.issues.length) issues.append(make('p', 'exercise-hint', '没有发现需要单独修改的问题。'));
+    result.issues.forEach((item, index) => {
+      const card = make('div', 'writing-issue');
+      card.append(make('span', 'question-number', `修改 ${String(index + 1).padStart(2, '0')}`), make('p', 'writing-original', item.original), make('p', 'writing-correction', item.correction), make('small', '', item.reason));
+      issues.append(card);
+    });
+    $('writing-revision').textContent = result.revised_essay;
+    $('writing-result').classList.remove('hidden');
+    recordActivity('writing', $('writing-title').textContent || level, result.score);
+    message('grade-message', `批改完成：${result.score}/100 分。`);
+    $('writing-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) { message('grade-message', error.message, true); }
+  finally { $('grade-writing').disabled = false; }
+});
+
+$('download-writing').addEventListener('click', () => {
+  if (!latestWriting) return;
+  const item = latestWriting;
+  const criteria = Object.entries(WRITING_CRITERIA).map(([key, label]) => `- ${label}：${item.criteria[key]}/25`).join('\n');
+  const issues = item.issues.map((issue, index) => `${index + 1}. 原文：${issue.original}\n   建议：${issue.correction}\n   说明：${issue.reason}`).join('\n\n');
+  download('写作批改.md', `# ${$('writing-title').textContent}\n\n${item.level} · ${item.word_count} 词 · ${item.score}/100 分\n\n## 写作要求\n\n${item.task}\n\n## 我的作文\n\n${item.essay}\n\n## 评语\n\n${item.summary}\n\n${criteria}\n\n## 优点\n\n${item.strengths.map(text => `- ${text}`).join('\n')}\n\n## 逐项批改\n\n${issues || '暂无'}\n\n## 参考修改稿\n\n${item.revised_essay}\n`);
 });
 
 $('generate-vocabulary').addEventListener('click', async () => {
@@ -923,9 +1015,11 @@ function download(filename, text) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function recordActivity(kind, title) {
+function recordActivity(kind, title, score = null) {
   const at = new Date().toISOString();
-  studyState.activity = [...(studyState.activity || []), { kind, title: String(title || '').slice(0, 120), at }].slice(-500);
+  const record = { kind, title: String(title || '').slice(0, 120), at };
+  if (typeof score === 'number') record.score = score;
+  studyState.activity = [...(studyState.activity || []), record].slice(-500);
   renderProgress();
   saveStudyState().then(renderProgress).catch(error => console.warn('练习记录保存失败', error));
   return at;
@@ -943,7 +1037,7 @@ function formatActivityTime(iso) {
   return `${day.slice(5)} ${time}`;
 }
 function activityCounts() {
-  const counts = { story: 0, exam: 0, translation: 0, vocabulary: 0 };
+  const counts = { story: 0, exam: 0, translation: 0, writing: 0, vocabulary: 0 };
   for (const item of studyState.activity || []) if (item.kind in counts) counts[item.kind]++;
   return counts;
 }
@@ -971,7 +1065,7 @@ function renderActivityList(container, items) {
   for (const item of items) {
     const row = make('div', 'activity-row');
     const details = make('div');
-    const label = ACTIVITY_LABELS[item.kind] + (typeof item.score === 'number' ? ` · ${item.score}/5 分` : '');
+    const label = ACTIVITY_LABELS[item.kind] + (typeof item.score === 'number' ? ` · ${item.score}/${item.kind === 'writing' ? 100 : 5} 分` : '');
     details.append(make('strong', '', label), make('span', '', item.title));
     row.append(make('span', `activity-dot dot-${item.kind}`, '✓'), details, make('time', '', formatActivityTime(item.at)));
     container.append(row);
@@ -985,6 +1079,7 @@ function renderProgress() {
   $('stat-stories').textContent = counts.story;
   $('stat-exams').textContent = counts.exam;
   $('stat-translations').textContent = counts.translation;
+  $('stat-writings').textContent = counts.writing;
   $('stat-vocabularies').textContent = counts.vocabulary;
   renderActivityList($('activity-list'), [...(studyState.activity || [])].reverse().slice(0, 5));
   if (!$('view-profile').classList.contains('hidden')) renderProfile();

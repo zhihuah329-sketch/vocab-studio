@@ -23,14 +23,16 @@ class ProfileDataTests(unittest.TestCase):
             activity = [
                 {"kind": "exam", "title": "A test", "at": "2026-10-24T05:00:00.000Z", "score": 4},
                 {"kind": "story", "title": "x" * 300, "at": "2026-10-24T06:00:00.000Z", "score": True},
+                {"kind": "writing", "title": "作文", "at": "2026-10-24T06:30:00.000Z", "score": 82},
                 {"kind": "unknown", "title": "drop", "at": "2026-10-24T06:00:00.000Z"},
                 {"kind": "translation", "title": "no date"},
             ]
             saved = save_study(path, {"custom": [], "progress": {}, "activity": activity})
-            self.assertEqual([item["kind"] for item in saved["activity"]], ["exam", "story"])
+            self.assertEqual([item["kind"] for item in saved["activity"]], ["exam", "story", "writing"])
             self.assertEqual(saved["activity"][0]["score"], 4)
             self.assertNotIn("score", saved["activity"][1])
             self.assertEqual(len(saved["activity"][1]["title"]), 120)
+            self.assertEqual(saved["activity"][2]["score"], 82)
             self.assertEqual(read_study(path)["activity"], saved["activity"])
 
     def test_activity_keeps_latest_500(self):

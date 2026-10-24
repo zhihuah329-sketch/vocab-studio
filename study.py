@@ -51,7 +51,7 @@ def clean_daily(value: object) -> dict:
     return daily
 
 
-ACTIVITY_KINDS = {"story", "exam", "translation", "vocabulary"}
+ACTIVITY_KINDS = {"story", "exam", "translation", "writing", "vocabulary"}
 MAX_ACTIVITY = 500
 
 
@@ -68,7 +68,8 @@ def clean_activity(value: object) -> list:
             continue
         record = {"kind": item["kind"], "title": str(item.get("title") or "")[:120], "at": at}
         score = item.get("score")
-        if isinstance(score, int) and not isinstance(score, bool) and 0 <= score <= 5:
+        limit = 100 if item["kind"] == "writing" else 5
+        if isinstance(score, int) and not isinstance(score, bool) and 0 <= score <= limit:
             record["score"] = score
         activity.append(record)
     return activity
