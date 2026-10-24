@@ -16,7 +16,7 @@ Windows 安装包请从 [GitHub Releases](https://github.com/zhihuah329-sketch/v
 
 ## 使用
 
-运行 `dist/VocabStudio-Setup-4.0.0.exe` 安装后，从开始菜单打开“词页英语练习工作台”。也可直接双击免安装版 `dist/词页英语练习工作台.exe`。程序会打开一个独立的 Edge 应用窗口；关闭窗口后本地服务会退出。若尚未打包，可在本目录运行 `py app.py`。
+运行 `dist/VocabStudio-Setup-4.0.1.exe` 安装后，从开始菜单打开“词页英语练习工作台”。也可直接双击免安装版 `dist/词页英语练习工作台.exe`。程序使用系统 WebView2 显示独立桌面窗口；关闭窗口后本地服务会退出。若尚未打包，可在本目录运行 `py app.py`。
 
 导入支持 TXT、CSV、TSV、XLSX。每行一个单词，或将英文单词放在第一列。文本文件支持 UTF-8 和 GB18030。可选任意数量的目标单词，但过多单词可能超出所用模型的上下文或生成能力。
 
@@ -36,7 +36,8 @@ Windows 安装包请从 [GitHub Releases](https://github.com/zhihuah329-sketch/v
 ## 开发与打包
 
 ```powershell
+py -m pip install -r requirements.txt
 .\build_setup.ps1
 ```
 
-需要 Python、PyInstaller 和 Inno Setup 6 或 7。脚本会运行测试、生成免安装 EXE，并编译 `setup.iss`。打包结果位于 `dist/`；安装包默认装到当前用户的 `%LOCALAPPDATA%\Programs\VocabStudio`，无需管理员权限，安装和卸载不会清除学习记录。运行需要本机安装 Edge。简体中文安装文本来自 [Inno Setup 源码仓库](https://github.com/jrsoftware/issrc/blob/main/Files/Languages/ChineseSimplified.isl)。
+需要 Python、Inno Setup 6 或 7，以及 Windows 的 Microsoft Edge WebView2 Runtime。脚本会运行测试、生成免安装 EXE，并编译 `setup.iss`。打包结果位于 `dist/`；安装包默认装到当前用户的 `%LOCALAPPDATA%\Programs\VocabStudio`，无需管理员权限，安装和卸载不会清除学习记录。简体中文安装文本来自 [Inno Setup 源码仓库](https://github.com/jrsoftware/issrc/blob/main/Files/Languages/ChineseSimplified.isl)。

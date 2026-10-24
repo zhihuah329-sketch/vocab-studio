@@ -1,20 +1,19 @@
-"""Launch the local reading studio in a desktop Edge app window."""
+"""Launch the local reading studio in a desktop WebView2 window."""
 
 from __future__ import annotations
 
 import json
 import os
 import secrets
-import subprocess
 import sys
-import tempfile
 import threading
-import webbrowser
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+import webview
 
 from core import generate_exam, generate_passage, generate_translation, generate_vocabulary, load_words_bytes, missing_words, translate_selection
 from settings import default_path, read_settings, save_settings
@@ -26,14 +25,6 @@ WEB = ROOT / "web"
 BOOKS = ROOT / "data" / "wordbooks.json"
 MAX_BODY = 8 * 1024 * 1024
 MIME = {".html": "text/html", ".css": "text/css", ".js": "text/javascript"}
-
-
-def edge_path() -> Path | None:
-    candidates = [
-        Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Microsoft/Edge/Application/msedge.exe",
-        Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Microsoft/Edge/Application/msedge.exe",
-    ]
-    return next((path for path in candidates if path.is_file()), None)
 
 
 def workbuddy_status() -> dict:
@@ -191,16 +182,9 @@ def main():
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     url = f"http://127.0.0.1:{server.server_address[1]}/"
-    edge = edge_path()
     try:
-        if edge:
-            # A unique profile keeps the browser process attached to this server.
-            with tempfile.TemporaryDirectory(prefix="vocab-reader-", ignore_cleanup_errors=True) as profile:
-                process = subprocess.Popen([str(edge), f"--app={url}", f"--user-data-dir={profile}", "--no-first-run"])
-                process.wait()
-        else:
-            webbrowser.open(url)
-            input("关闭浏览器页面后按 Enter 退出程序。")
+        webview.create_window("词页 · 英语练习工作台", url, width=1280, height=820, min_size=(760, 560), background_color="#f7f8f4")
+        webview.start(gui="edgechromium")
     finally:
         server.shutdown()
         server.server_close()

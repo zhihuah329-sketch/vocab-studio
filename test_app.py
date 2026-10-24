@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from app import make_handler, workbuddy_status
+from app import main, make_handler, workbuddy_status
 
 
 class FakeProvider(BaseHTTPRequestHandler):
@@ -157,6 +157,14 @@ class ApiTests(unittest.TestCase):
             finally:
                 app.shutdown()
                 app.server_close()
+
+    def test_main_launches_webview_window_not_browser(self):
+        with patch("app.webview.create_window") as create_window, patch("app.webview.start") as start_webview:
+            main()
+        create_window.assert_called_once()
+        self.assertEqual(create_window.call_args.args[0], "词页 · 英语练习工作台")
+        self.assertTrue(create_window.call_args.args[1].startswith("http://127.0.0.1:"))
+        start_webview.assert_called_once_with(gui="edgechromium")
 
 
 if __name__ == "__main__":
