@@ -51,24 +51,29 @@ class FakeProvider(BaseHTTPRequestHandler):
 
 
 class ApiTests(unittest.TestCase):
+    def test_desktop_api_does_not_expose_window_graph_to_js_bridge(self):
+        api = DesktopApi()
+        api._window = MagicMock()
+        self.assertFalse([name for name in vars(api) if not name.startswith("_")])
+
     def test_desktop_word_export_uses_save_dialog(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "reading.docx"
             api = DesktopApi()
-            api.window = MagicMock()
-            api.window.create_file_dialog.return_value = (str(target),)
+            api._window = MagicMock()
+            api._window.create_file_dialog.return_value = (str(target),)
             result = api.export_reading_word({
                 "kind": "story", "title": "A Journey", "passage": "A short passage.",
                 "translation": "一段短文。", "words": ["journey"],
             }, "阅读短文.docx")
             self.assertTrue(result["saved"])
             self.assertEqual(target.read_bytes()[:2], b"PK")
-            api.window.create_file_dialog.assert_called_once()
+            api._window.create_file_dialog.assert_called_once()
 
     def test_desktop_word_export_can_be_cancelled(self):
         api = DesktopApi()
-        api.window = MagicMock()
-        api.window.create_file_dialog.return_value = None
+        api._window = MagicMock()
+        api._window.create_file_dialog.return_value = None
         self.assertEqual(api.export_reading_word({
             "kind": "story", "title": "A Journey", "passage": "A short passage.",
             "translation": "一段短文。", "words": [],

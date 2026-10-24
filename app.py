@@ -33,15 +33,15 @@ _buddy_process: subprocess.Popen | None = None
 
 class DesktopApi:
     def __init__(self):
-        self.window = None
+        self._window = None
 
     def export_reading_word(self, payload: dict, filename: str) -> dict:
-        if self.window is None:
+        if self._window is None:
             raise RuntimeError("桌面窗口尚未准备好。")
         if filename not in {"阅读短文.docx", "等级考试阅读.docx"}:
             raise ValueError("无效的导出文件名。")
         document = build_reading_docx(payload)
-        selection = self.window.create_file_dialog(
+        selection = self._window.create_file_dialog(
             webview.FileDialog.SAVE,
             save_filename=filename,
             file_types=("Word 文档 (*.docx)",),
@@ -297,7 +297,7 @@ def main():
     try:
         desktop_api = DesktopApi()
         window = webview.create_window("词页 · 英语练习工作台", url, width=1280, height=820, min_size=(760, 560), background_color="#f7f8f4", js_api=desktop_api)
-        desktop_api.window = window
+        desktop_api._window = window
         webview.start(gui="edgechromium")
     finally:
         server.shutdown()

@@ -22,7 +22,7 @@ Windows 安装包请从 [GitHub Releases](https://github.com/zhihuah329-sketch/v
 
 ## 使用
 
-运行 `dist/VocabStudio-Setup-4.3.2.exe` 安装后，从开始菜单打开“词页英语练习工作台”。也可直接双击免安装版 `dist/词页英语练习工作台.exe`。程序使用系统 WebView2 显示独立桌面窗口；关闭窗口后本地服务会退出。若尚未打包，可在本目录运行 `py app.py`。
+运行 `dist/VocabStudio-Setup-4.3.3.exe` 安装后，从开始菜单打开“词页英语练习工作台”。也可直接双击免安装版 `dist/词页英语练习工作台.exe`。程序使用系统 WebView2 显示独立桌面窗口；关闭窗口后本地服务会退出。若尚未打包，可在本目录运行 `py app.py`。
 
 导入支持 TXT、CSV、TSV、XLSX。每行一个单词，或将英文单词放在第一列。文本文件支持 UTF-8 和 GB18030。可选任意数量的目标单词，但过多单词可能超出所用模型的上下文或生成能力。
 
