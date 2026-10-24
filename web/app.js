@@ -382,6 +382,7 @@ function showView(name) {
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
 $('kaoyan-reading').addEventListener('click', () => {
   $('exam-type').value = $('kaoyan-track').value;
+  updateExamLengthHint();
   showView('exam');
   $('generate-exam').click();
 });
@@ -433,9 +434,20 @@ $('generate-exam').addEventListener('click', async () => {
   finally { $('generate-exam').disabled = false; }
 });
 
+const examLengthHints = {
+  '英语四级': '四级仔细阅读：单篇约 300–350 词，附 5 道选择题。',
+  '英语六级': '六级仔细阅读：单篇约 400–450 词，附 5 道选择题。'
+};
+function updateExamLengthHint() {
+  $('exam-length-hint').textContent = (examLengthHints[$('exam-type').value] || '原创模拟阅读：单篇约 300–450 词，附 5 道选择题。') + ' 已选目标词会尽量自然融入。';
+}
+$('exam-type').addEventListener('change', updateExamLengthHint);
+updateExamLengthHint();
+
 function renderExam(result) {
   $('exam-title').textContent = result.title;
-  $('exam-label').textContent = result.exam + ' · 原创模拟';
+  const wordCount = (result.passage.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []).length;
+  $('exam-label').textContent = `${result.exam} · ${wordCount} 词 · 原创模拟`;
   $('exam-passage').textContent = result.passage;
   $('exam-translation').textContent = result.translation;
   $('exam-translation').classList.add('hidden');

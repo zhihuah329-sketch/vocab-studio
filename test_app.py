@@ -8,6 +8,7 @@ from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from app import main, make_handler, start_workbuddy, workbuddy_status
+from core import english_word_count, generate_exam
 
 
 class FakeProvider(BaseHTTPRequestHandler):
@@ -21,7 +22,10 @@ class FakeProvider(BaseHTTPRequestHandler):
         FakeProvider.received = {"headers": dict(self.headers), "body": json.loads(self.rfile.read(size))}
         prompt = FakeProvider.received["body"]["messages"][0]["content"]
         if "exam-style" in prompt:
-            content = {"title": "A Journey", "passage": "An original reading passage.", "translation": "一篇原创阅读文章。", "questions": [{"stem": f"Question {i}?", "options": ["One", "Two", "Three", "Four"], "answer": "A", "explanation": "文章支持 A。"} for i in range(5)]}
+            exam_type = json.loads(FakeProvider.received["body"]["messages"][1]["content"])["exam_type"]
+            sentence = "Curious students read this original article and discuss its ideas with their classmates."
+            repetitions = 25 if exam_type == "英语四级" else 32 if exam_type == "英语六级" else 1
+            content = {"title": "A Journey", "passage": " ".join([sentence] * repetitions), "translation": "一篇原创阅读文章。", "questions": [{"stem": f"Question {i}?", "options": ["One", "Two", "Three", "Four"], "answer": "A", "explanation": "文章支持 A。"} for i in range(5)]}
         elif "translation exercise" in prompt:
             content = {"title": "Translation", "items": [{"source": f"句子 {i}", "reference": f"Sentence {i}", "note": "注意句型。"} for i in range(5)]}
         elif "vocabulary list" in prompt:
@@ -38,6 +42,14 @@ class FakeProvider(BaseHTTPRequestHandler):
 
 
 class ApiTests(unittest.TestCase):
+    def test_cet4_passage_retries_when_too_short(self):
+        short = {"title": "Short", "passage": "Too short.", "translation": "过短。", "questions": [{"stem": "Why?", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "解释。"} for _ in range(5)]}
+        long_enough = {**short, "passage": " ".join(["A clear reading passage helps students understand ideas and answer questions correctly."] * 26)}
+        with patch("core.chat_json", side_effect=[short, long_enough]) as send:
+            result = generate_exam("http://localhost", "test", "", "英语四级", "", [])
+        self.assertEqual(send.call_count, 2)
+        self.assertTrue(300 <= english_word_count(result["passage"]) <= 350)
+
     def test_buddy_starts_headless_cli(self):
         with patch("app.workbuddy_status", return_value={"available": False}), \
              patch("app.Path.is_file", return_value=True), \

@@ -24,7 +24,7 @@
       <button class="nav-item" data-view="profile"><span>◔</span> 个人数据 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="settings"><span>⚙</span> 设置 <span class="nav-arrow">↗</span></button>
       <div class="side-tip"><div class="tip-icon">✦</div><strong>从记住到会用</strong><p>短文阅读、考试练习与翻译训练，都可以用你的目标词。</p></div>
-      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.2.1</span></div>
+      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.2.2</span></div>
     </aside>
 
     <main class="workspace">
@@ -92,7 +92,7 @@
               <section class="card settings-card">
                 <div class="card-head"><span class="step">03</span><div><h2>等级考试阅读</h2><p>原创模拟题 · 文章 + 5 道选择题</p></div></div>
                 <div class="field-grid"><label>考试类型<select id="exam-type"><option>高考</option><option selected>英语四级</option><option>英语六级</option><option>考研英语一</option><option>考研英语二</option><option>雅思</option></select></label><label>主题 <span>可选</span><input id="exam-topic" placeholder="例如：科技与社会"></label></div>
-                <p class="exercise-hint">可直接生成；如果已选择目标词，出题时会尽量自然融入。</p>
+                <p id="exam-length-hint" class="exercise-hint">四级仔细阅读：单篇约 300–350 词，附 5 道选择题。已选目标词会尽量自然融入。</p>
                 <div class="generate-row"><button id="generate-exam" class="button button-primary">✦ 生成阅读试题 <span>→</span></button><span id="exam-message" class="message" role="status"></span></div>
               </section>
               <section id="exam-result" class="card result-card hidden">

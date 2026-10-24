@@ -149,17 +149,40 @@ def generate_passage(api_url: str, model: str, api_key: str, words: list[str], l
 
 
 EXAM_LEVELS = {"高考", "英语四级", "英语六级", "考研英语", "考研英语一", "考研英语二", "雅思"}
+EXAM_PASSAGE_WORDS = {"英语四级": (300, 350), "英语六级": (400, 450)}
+
+
+def english_word_count(text: str) -> int:
+    return len(re.findall(r"[A-Za-z]+(?:['’-][A-Za-z]+)*", text))
 
 
 def generate_exam(api_url: str, model: str, api_key: str, exam: str, topic: str, words: list[str]) -> dict:
     if exam not in EXAM_LEVELS:
         raise ValueError("不支持这个考试类型。")
-    result = chat_json(
-        api_url, model, api_key,
-        "Create an original English exam-style reading exercise for Chinese learners. If the exam type is postgraduate English I or II, use the corresponding difficulty and academic reading style. It must be an original practice exercise, not copied from any real exam. Return only JSON: title (string), passage (string, 300-450 English words), translation (Simplified Chinese string), questions (array of exactly 5 objects). Each question object has stem (English string), options (array of exactly 4 English strings in A/B/C/D order), answer (one uppercase letter A/B/C/D), explanation (Simplified Chinese string explaining the correct option). Mix main idea, detail, inference, and vocabulary questions. Ensure each answer is unambiguous and supported by the passage. Use supplied target words where natural. No markdown.",
-        {"exam_type": exam, "topic": topic or "choose a realistic topic", "target_words_if_natural": words},
+    word_range = EXAM_PASSAGE_WORDS.get(exam, (300, 450))
+    lower, upper = word_range
+    request_data = {"exam_type": exam, "topic": topic or "choose a realistic topic", "target_words_if_natural": words, "passage_word_range": [lower, upper], "target_passage_words": (lower + upper) // 2}
+    system_prompt = (
+        "Create an original English exam-style reading exercise for Chinese learners. "
+        "If the exam type is postgraduate English I or II, use the corresponding difficulty and academic reading style. "
+        "It must be an original practice exercise, not copied from any real exam. "
+        f"The passage alone must contain {lower}-{upper} English words (aim near {(lower + upper) // 2}); count before responding. "
+        "Return only JSON: title (string), passage (string), translation (Simplified Chinese string), questions (array of exactly 5 objects). "
+        "Each question object has stem (English string), options (array of exactly 4 English strings in A/B/C/D order), "
+        "answer (one uppercase letter A/B/C/D), explanation (Simplified Chinese string explaining the correct option). "
+        "Mix main idea, detail, inference, and vocabulary questions. Ensure each answer is unambiguous and supported by the passage. "
+        "Use supplied target words where natural. No markdown."
     )
-    require_strings(result, "title", "passage", "translation")
+    for attempt in range(3 if exam in EXAM_PASSAGE_WORDS else 1):
+        result = chat_json(api_url, model, api_key, system_prompt, request_data)
+        require_strings(result, "title", "passage", "translation")
+        count = english_word_count(result["passage"])
+        if exam not in EXAM_PASSAGE_WORDS or lower <= count <= upper:
+            break
+        if attempt == 2:
+            raise RuntimeError(f"AI 生成的{exam}文章为 {count} 词，未达到 {lower}–{upper} 词。请重试。")
+        request_data["previous_passage_words"] = count
+        request_data["revision_instruction"] = f"Regenerate the whole exercise. The previous passage had {count} words; make the new passage {lower}-{upper} words and keep all questions consistent with it."
     questions = result.get("questions")
     if not isinstance(questions, list) or len(questions) != 5:
         raise RuntimeError("AI 返回的题目数量不正确，请重试。")
