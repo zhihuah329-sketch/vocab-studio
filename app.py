@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, quote, urlparse
 import webview
 
 from core import generate_exam, generate_passage, generate_translation, generate_vocabulary, generate_writing_prompt, grade_writing, load_words_bytes, missing_words, translate_selection
+from export_docx import build_reading_docx
 from settings import default_path, read_settings, save_settings
 from study import default_study_path, get_book, list_books, read_study, save_study
 
@@ -174,6 +175,15 @@ def make_handler(token: str, settings_path: Path | None = None, study_path: Path
                     filename = self.headers.get("X-Filename", "words.txt")
                     words = load_words_bytes(filename, body)
                     self._json(200, {"words": words})
+                elif self.path == "/api/export/docx":
+                    document = build_reading_docx(json.loads(body))
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    self.send_header("Content-Disposition", 'attachment; filename="VocabStudio-Reading.docx"')
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Content-Length", str(len(document)))
+                    self.end_headers()
+                    self.wfile.write(document)
                 elif self.path == "/api/generate":
                     data = json.loads(body)
                     words = data.get("words", [])

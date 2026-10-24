@@ -515,6 +515,16 @@ $('download-exam').addEventListener('click', () => {
   const questions = latestExam.questions.map((q, i) => `${i + 1}. ${q.stem}\n${q.options.map((o, j) => `${'ABCD'[j]}. ${o}`).join('\n')}\n\n答案：${q.answer}。${q.explanation}`).join('\n\n');
   download('等级考试阅读.md', `# ${latestExam.title}\n\n${latestExam.exam} · 原创模拟\n\n${latestExam.passage}\n\n## 题目与解析\n\n${questions}\n\n## 文章译文\n\n${latestExam.translation}\n`);
 });
+$('download-exam-word').addEventListener('click', async () => {
+  if (!latestExam) return;
+  const button = $('download-exam-word');
+  button.disabled = true;
+  try {
+    await downloadReadingWord('等级考试阅读.docx', { kind: 'exam', title: latestExam.title, exam: latestExam.exam,
+      passage: latestExam.passage, translation: latestExam.translation, questions: latestExam.questions });
+  } catch (error) { message('exam-message', `Word 导出失败：${error.message}`, true); }
+  finally { button.disabled = false; }
+});
 
 $('generate-translation').addEventListener('click', async () => {
   let request;
@@ -1015,6 +1025,21 @@ function download(filename, text) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+async function downloadReadingWord(filename, payload) {
+  const response = await fetch('/api/export/docx', { method: 'POST',
+    headers: { 'X-App-Token': token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.error || `请求失败：${response.status}`);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function recordActivity(kind, title, score = null) {
   const at = new Date().toISOString();
   const record = { kind, title: String(title || '').slice(0, 120), at };
@@ -1299,4 +1324,14 @@ $('download').addEventListener('click', () => {
   a.download = '阅读短文.md';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+$('download-word').addEventListener('click', async () => {
+  if (!latest) return;
+  const button = $('download-word');
+  button.disabled = true;
+  try {
+    await downloadReadingWord('阅读短文.docx', { kind: 'story', title: latest.title, passage: latest.passage,
+      translation: latest.translation, words: latest.words });
+  } catch (error) { message('generate-message', `Word 导出失败：${error.message}`, true); }
+  finally { button.disabled = false; }
 });

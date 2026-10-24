@@ -1,3 +1,4 @@
 openpyxl>=3.1,<4
+python-docx>=1.2,<2
 pywebview==6.2.1
 pyinstaller>=6.20,<7

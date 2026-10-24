@@ -1,6 +1,7 @@
 import json
 import threading
 import unittest
+import urllib.error
 import urllib.request
 import tempfile
 from pathlib import Path
@@ -50,6 +51,25 @@ class FakeProvider(BaseHTTPRequestHandler):
 
 
 class ApiTests(unittest.TestCase):
+    def test_word_export_is_downloadable_and_token_protected(self):
+        app = ThreadingHTTPServer(("127.0.0.1", 0), make_handler("test-token"))
+        thread = threading.Thread(target=app.serve_forever, daemon=True)
+        thread.start()
+        url = f"http://127.0.0.1:{app.server_address[1]}/api/export/docx"
+        body = json.dumps({"kind": "story", "title": "Reading", "passage": "A short passage.",
+                           "translation": "一篇短文。", "words": ["short"]}).encode()
+        try:
+            with self.assertRaises(urllib.error.HTTPError) as unauthorized:
+                urllib.request.urlopen(urllib.request.Request(url, data=body, method="POST"))
+            self.assertEqual(unauthorized.exception.code, 403)
+            request = urllib.request.Request(url, data=body, method="POST", headers={"X-App-Token": "test-token"})
+            with urllib.request.urlopen(request) as response:
+                self.assertTrue(response.read().startswith(b"PK"))
+                self.assertIn("wordprocessingml.document", response.headers["Content-Type"])
+        finally:
+            app.shutdown()
+            app.server_close()
+
     def test_cet4_passage_retries_when_too_short(self):
         short = {"title": "Short", "passage": "Too short.", "translation": "过短。", "questions": [{"stem": "Why?", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "解释。"} for _ in range(5)]}
         long_enough = {**short, "passage": " ".join(["A clear reading passage helps students understand ideas and answer questions correctly."] * 26)}

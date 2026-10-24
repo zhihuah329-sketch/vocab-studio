@@ -25,7 +25,7 @@
       <button class="nav-item" data-view="profile"><span>◔</span> 个人数据 <span class="nav-arrow">↗</span></button>
       <button class="nav-item" data-view="settings"><span>⚙</span> 设置 <span class="nav-arrow">↗</span></button>
       <div class="side-tip"><div class="tip-icon">✦</div><strong>从记住到会用</strong><p>短文阅读、考试练习与翻译训练，都可以用你的目标词。</p></div>
-      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.3.0</span></div>
+      <div class="side-bottom"><span class="online-dot"></span> 本地桌面应用 <span>v4.3.1</span></div>
     </aside>
 
     <main class="workspace">
@@ -86,7 +86,7 @@
                 <div class="tabs"><button id="tab-english" class="tab active">英文原文</button><button id="tab-chinese" class="tab">中文译文</button></div>
                 <p class="selection-hint">选中英文单词或句子，即可查看中文翻译。</p>
                 <div id="passage" class="reading selectable-reading" tabindex="0"></div><div id="translation" class="reading translation hidden"></div>
-                <div class="result-actions"><button id="copy" class="button button-subtle">复制原文</button><button id="download" class="button button-subtle">↓ 导出 Markdown</button></div>
+                <div class="result-actions"><button id="copy" class="button button-subtle">复制原文</button><button id="download-word" class="button button-primary" type="button">↓ 导出 Word</button><button id="download" class="button button-subtle">↓ 导出 Markdown</button></div>
               </section>
             </div>
 
@@ -103,7 +103,7 @@
                 <div id="exam-passage" class="reading exam-passage selectable-reading" tabindex="0"></div>
                 <div class="section-split"><strong>阅读理解</strong><span>每题 1 分，共 5 分</span></div>
                 <div id="exam-questions"></div>
-                <div class="result-actions"><button id="submit-exam" class="button button-primary">提交答案</button><button id="toggle-exam-translation" class="button button-subtle">查看文章译文</button><button id="download-exam" class="button button-subtle">↓ 导出试题</button></div>
+                <div class="result-actions"><button id="submit-exam" class="button button-primary">提交答案</button><button id="toggle-exam-translation" class="button button-subtle">查看文章译文</button><button id="download-exam-word" class="button button-subtle" type="button">↓ 导出 Word</button><button id="download-exam" class="button button-subtle">↓ 导出 Markdown</button></div>
                 <div id="exam-score" class="score-box hidden" role="status"></div>
                 <div id="exam-translation" class="reading translation hidden"></div>
               </section>
