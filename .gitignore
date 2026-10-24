@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.edge-profile*/
+.tools/
+build/
+dist/
+ecdict.csv
+ecdict.mini.csv
+*.spec

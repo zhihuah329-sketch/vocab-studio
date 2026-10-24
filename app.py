@@ -1,0 +1,210 @@
+"""Launch the local reading studio in a desktop Edge app window."""
+
+from __future__ import annotations
+
+import json
+import os
+import secrets
+import subprocess
+import sys
+import tempfile
+import threading
+import webbrowser
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+from core import generate_exam, generate_passage, generate_translation, generate_vocabulary, load_words_bytes, missing_words, translate_selection
+from settings import default_path, read_settings, save_settings
+from study import default_study_path, get_book, list_books, read_study, save_study
+
+
+ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+WEB = ROOT / "web"
+BOOKS = ROOT / "data" / "wordbooks.json"
+MAX_BODY = 8 * 1024 * 1024
+MIME = {".html": "text/html", ".css": "text/css", ".js": "text/javascript"}
+
+
+def edge_path() -> Path | None:
+    candidates = [
+        Path(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")) / "Microsoft/Edge/Application/msedge.exe",
+        Path(os.environ.get("PROGRAMFILES", r"C:\Program Files")) / "Microsoft/Edge/Application/msedge.exe",
+    ]
+    return next((path for path in candidates if path.is_file()), None)
+
+
+def workbuddy_status() -> dict:
+    try:
+        port = int(os.environ.get("BUDDY_DESKTOP_PORT", "5178"))
+        if not 1 <= port <= 65535:
+            raise ValueError
+    except ValueError:
+        port = 5178
+    base = f"http://127.0.0.1:{port}"
+    try:
+        with urllib.request.urlopen(base + "/v1", timeout=3) as response:
+            info = json.load(response)
+        with urllib.request.urlopen(base + "/v1/models", timeout=3) as response:
+            listing = json.load(response)
+        if not isinstance(info, dict) or info.get("message") != "Buddy Desktop" or not isinstance(listing, dict) or not isinstance(listing.get("data"), list):
+            raise ValueError("端口响应不是 Buddy Desktop 模型接口")
+        models = [item["id"] for item in listing.get("data", []) if isinstance(item, dict) and isinstance(item.get("id"), str)]
+        return {"available": True, "api_url": base + "/v1/chat/completions", "models": models}
+    except (OSError, ValueError, urllib.error.URLError) as exc:
+        return {"available": False, "api_url": base + "/v1/chat/completions", "models": [], "message": f"无法识别 Buddy Desktop 本机接口（{port} 端口）：{exc}"}
+
+
+def make_handler(token: str, settings_path: Path | None = None, study_path: Path | None = None, books_path: Path | None = None):
+    preferences = settings_path or default_path()
+    study_file = study_path or default_study_path()
+    books_file = books_path or BOOKS
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def do_GET(self):
+            parsed = urlparse(self.path)
+            route = parsed.path
+            if route in {"/api/settings", "/api/workbuddy", "/api/books", "/api/book", "/api/study"}:
+                if self.headers.get("X-App-Token") != token:
+                    self._json(403, {"error": "请求未授权。"})
+                else:
+                    try:
+                        if route == "/api/settings":
+                            result = read_settings(preferences)
+                        elif route == "/api/workbuddy":
+                            result = workbuddy_status()
+                        elif route == "/api/books":
+                            result = list_books(books_file)
+                        elif route == "/api/book":
+                            result = get_book(books_file, parse_qs(parsed.query).get("id", [""])[0])
+                        else:
+                            result = read_study(study_file)
+                        self._json(200, result)
+                    except (OSError, ValueError) as exc:
+                        self._json(400, {"error": str(exc)})
+                return
+            filename = "index.html" if route == "/" else route.lstrip("/")
+            if filename not in {"index.html", "style.css", "additions.css", "app.js"}:
+                self.send_error(404)
+                return
+            path = WEB / filename
+            try:
+                data = path.read_bytes()
+            except OSError:
+                self.send_error(404)
+                return
+            if filename == "index.html":
+                data = data.replace(b"__APP_TOKEN__", token.encode("ascii"))
+            self.send_response(200)
+            self.send_header("Content-Type", MIME[path.suffix] + "; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_POST(self):
+            if self.headers.get("X-App-Token") != token:
+                self._json(403, {"error": "请求未授权。"})
+                return
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                size = 0
+            if not 0 < size <= MAX_BODY:
+                self._json(413, {"error": "文件或请求过大，限制为 8 MB。"})
+                return
+            body = self.rfile.read(size)
+            try:
+                if self.path == "/api/parse":
+                    filename = self.headers.get("X-Filename", "words.txt")
+                    words = load_words_bytes(filename, body)
+                    self._json(200, {"words": words})
+                elif self.path == "/api/generate":
+                    data = json.loads(body)
+                    words = data.get("words", [])
+                    if not isinstance(words, list) or not all(isinstance(word, str) for word in words):
+                        raise ValueError("单词列表格式有误。")
+                    result = generate_passage(
+                        str(data.get("api_url", "")), str(data.get("model", "")),
+                        str(data.get("api_key", "")), words,
+                        str(data.get("level", "B1")), int(data.get("length", 250)),
+                        str(data.get("topic", "")),
+                    )
+                    result["missing"] = missing_words(result["passage"], words)
+                    self._json(200, result)
+                elif self.path == "/api/settings":
+                    self._json(200, save_settings(preferences, json.loads(body)))
+                elif self.path == "/api/study":
+                    self._json(200, save_study(study_file, json.loads(body)))
+                elif self.path == "/api/vocabulary":
+                    data = json.loads(body)
+                    result = generate_vocabulary(
+                        str(data.get("api_url", "")), str(data.get("model", "")),
+                        str(data.get("api_key", "")), str(data.get("level", "")),
+                        int(data.get("count", 20)), str(data.get("topic", "")),
+                    )
+                    self._json(200, result)
+                elif self.path == "/api/translate-selection":
+                    data = json.loads(body)
+                    result = translate_selection(
+                        str(data.get("api_url", "")), str(data.get("model", "")),
+                        str(data.get("api_key", "")), str(data.get("text", "")),
+                        str(data.get("context", "")),
+                    )
+                    self._json(200, result)
+                elif self.path in {"/api/exam", "/api/translation"}:
+                    data = json.loads(body)
+                    words = data.get("words", [])
+                    if not isinstance(words, list) or not all(isinstance(word, str) for word in words):
+                        raise ValueError("单词列表格式有误。")
+                    common = (str(data.get("api_url", "")), str(data.get("model", "")), str(data.get("api_key", "")))
+                    if self.path == "/api/exam":
+                        result = generate_exam(*common, str(data.get("exam", "")), str(data.get("topic", "")), words)
+                    else:
+                        result = generate_translation(*common, str(data.get("direction", "")), str(data.get("level", "")), str(data.get("topic", "")), words)
+                    self._json(200, result)
+                else:
+                    self._json(404, {"error": "接口不存在。"})
+            except (ValueError, RuntimeError, OSError, json.JSONDecodeError) as exc:
+                self._json(400, {"error": str(exc)})
+
+        def _json(self, status: int, value: dict):
+            data = json.dumps(value, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+    return Handler
+
+
+def main():
+    token = secrets.token_urlsafe(24)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(token))
+    server.daemon_threads = True
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    edge = edge_path()
+    try:
+        if edge:
+            # A unique profile keeps the browser process attached to this server.
+            with tempfile.TemporaryDirectory(prefix="vocab-reader-", ignore_cleanup_errors=True) as profile:
+                process = subprocess.Popen([str(edge), f"--app={url}", f"--user-data-dir={profile}", "--no-first-run"])
+                process.wait()
+        else:
+            webbrowser.open(url)
+            input("关闭浏览器页面后按 Enter 退出程序。")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+if __name__ == "__main__":
+    main()
